@@ -42,10 +42,10 @@ export default function HowItWorksPage() {
         <Heading center kicker="Your stay with Nestly" title="Move-in ready from day one" />
         <FeatureCards
           items={[
-            { icon: "/images/icons/curated-space.png", title: "Furnished & cleaned", bullets: ["Professionally cleaned before arrival", "Fresh linens and towels", "Fully equipped kitchen"] },
-            { icon: "/images/icons/wifi-included.png", title: "Utilities & Wi‑Fi", bullets: ["High-speed internet set up", "Utilities typically included", "Space to focus and work"] },
-            { icon: "/images/icons/efforless-booking.png", title: "Personal booking", bullets: ["Request to book, no instant checkout", "We confirm availability with you", "30-night minimum"] },
-            { icon: "/images/icons/neighborhood-access.png", title: "Support", bullets: ["24/7 app support", "Neighborhood guides", "A real person to message"] },
+            { icon: "/images/3d/broom.png", title: "Furnished & cleaned", bullets: ["Professionally cleaned before arrival", "Fresh linens and towels", "Fully equipped kitchen"] },
+            { icon: "/images/3d/wifi.png", title: "Utilities & Wi‑Fi", bullets: ["High-speed internet set up", "Utilities typically included", "Space to focus and work"] },
+            { icon: "/images/3d/calendar.png", title: "Personal booking", bullets: ["Request to book, no instant checkout", "We confirm availability with you", "30-night minimum"] },
+            { icon: "/images/3d/headphone.png", title: "Support", bullets: ["24/7 app support", "Neighborhood guides", "A real person to message"] },
           ]}
         />
       </Section>

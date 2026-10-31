@@ -143,7 +143,7 @@ export function FeatureCards({ items }: { items: { icon: string; title: string; 
       {items.map((i) => (
         <article key={i.title} className="rounded-3xl border border-line bg-white p-3">
           <div className="flex h-44 items-center justify-center rounded-2xl bg-gradient-to-br from-[#f1f1ff] to-[#f8f8ff]">
-            <Image src={i.icon} alt="" width={120} height={120} className="h-28 w-auto object-contain" />
+            <Image src={i.icon} alt="" width={144} height={144} className="h-28 w-28 object-contain drop-shadow-[0_10px_16px_rgba(60,60,160,.18)]" />
           </div>
           <div className="px-3 pb-3 pt-5">
             <h3 className="text-xl">{i.title}</h3>

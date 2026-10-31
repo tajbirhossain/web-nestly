@@ -224,7 +224,7 @@ export default function Home() {
             {hostSteps.map((h) => (
               <li key={h.title} className="flex items-center gap-5 rounded-3xl bg-soft p-5">
                 <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white">
-                  <Image src={h.icon} alt="" width={28} height={28} className="h-7 w-7 object-contain" />
+                  <Image src={h.icon} alt="" width={96} height={96} className="h-9 w-9 object-contain" />
                 </span>
                 <span>
                   <strong className="block font-serif text-lg font-medium">{h.title}</strong>

@@ -257,10 +257,10 @@ export const neighborhoods = [
 ];
 
 export const features = [
-  { title: "Effortless booking", text: "Request a stay and we confirm availability with you directly.", icon: "/images/icons/efforless-booking.png" },
-  { title: "Wi‑Fi included", text: "Work-ready internet and a dedicated space to focus.", icon: "/images/icons/wifi-included.png" },
-  { title: "Curated interiors", text: "Professionally furnished and cleaned before you arrive.", icon: "/images/icons/curated-space.png" },
-  { title: "Neighborhood access", text: "Live where New York actually happens — not a hotel corridor.", icon: "/images/icons/neighborhood-access.png" },
+  { title: "Effortless booking", text: "Request a stay and we confirm availability with you directly.", icon: "/images/3d/calendar.png" },
+  { title: "Wi‑Fi included", text: "Work-ready internet and a dedicated space to focus.", icon: "/images/3d/wifi.png" },
+  { title: "Curated interiors", text: "Professionally furnished and cleaned before you arrive.", icon: "/images/3d/couch.png" },
+  { title: "Neighborhood access", text: "Live where New York actually happens — not a hotel corridor.", icon: "/images/3d/map.png" },
 ];
 
 export const steps = [
@@ -306,9 +306,9 @@ export const lifestyles = [
 ];
 
 export const hostSteps = [
-  { title: "List Your Space", text: "It's quick and easy", icon: "/images/icons/home.png" },
-  { title: "Welcome Guests", text: "Provide great stays", icon: "/images/icons/user.png" },
-  { title: "Earn More", text: "Maximize your income", icon: "/images/icons/wallet.png" },
+  { title: "List Your Space", text: "It's quick and easy", icon: "/images/3d/house.png" },
+  { title: "Welcome Guests", text: "Provide great stays", icon: "/images/3d/handshake.png" },
+  { title: "Earn More", text: "Maximize your income", icon: "/images/3d/money.png" },
 ];
 
 export const posts = [

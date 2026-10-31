@@ -35,10 +35,10 @@ export default function RelocationPage() {
         <Heading center kicker="A soft landing" title="Everything ready when you arrive" />
         <FeatureCards
           items={[
-            { icon: "/images/icons/curated-space.png", title: "Move-in ready", bullets: ["Kitchens, linens and essentials", "Professionally cleaned", "Utilities set up"] },
-            { icon: "/images/icons/neighborhood-access.png", title: "Right neighborhood", bullets: ["Options across Manhattan, the Bronx, Brooklyn and New Jersey", "Neighborhood guidance", "Try an area before you commit"] },
-            { icon: "/images/icons/efforless-booking.png", title: "Flexible terms", bullets: ["Stay month-plus", "Extend while you search", "No long lease required"] },
-            { icon: "/images/icons/wifi-included.png", title: "Settle in fast", bullets: ["Fast Wi‑Fi from day one", "Space to work from home", "24/7 app support"] },
+            { icon: "/images/3d/key.png", title: "Move-in ready", bullets: ["Kitchens, linens and essentials", "Professionally cleaned", "Utilities set up"] },
+            { icon: "/images/3d/map.png", title: "Right neighborhood", bullets: ["Options across Manhattan, the Bronx, Brooklyn and New Jersey", "Neighborhood guidance", "Try an area before you commit"] },
+            { icon: "/images/3d/calendar.png", title: "Flexible terms", bullets: ["Stay month-plus", "Extend while you search", "No long lease required"] },
+            { icon: "/images/3d/wifi.png", title: "Settle in fast", bullets: ["Fast Wi‑Fi from day one", "Space to work from home", "24/7 app support"] },
           ]}
         />
       </Section>

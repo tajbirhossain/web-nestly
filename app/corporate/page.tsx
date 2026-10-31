@@ -37,10 +37,10 @@ export default function CorporatePage() {
         <Heading center kicker="The Nestly standard" title="A single solution for your corporate housing needs" />
         <FeatureCards
           items={[
-            { icon: "/images/icons/efforless-booking.png", title: "Book directly", bullets: ["Employees or HR can request", "One point of contact", "Personal confirmation of every stay"] },
-            { icon: "/images/icons/curated-space.png", title: "Corporate apartments", bullets: ["Professionally furnished and cleaned", "Move-in ready from day one", "Flexible 30+ day terms"] },
-            { icon: "/images/icons/wifi-included.png", title: "Work-ready", bullets: ["High-speed Wi‑Fi set up before arrival", "Space to focus and decompress", "Utilities typically included"] },
-            { icon: "/images/icons/neighborhood-access.png", title: "Right neighborhood", bullets: ["Manhattan business districts", "Brooklyn options as inventory grows", "Transit-friendly buildings"] },
+            { icon: "/images/3d/handshake.png", title: "Book directly", bullets: ["Employees or HR can request", "One point of contact", "Personal confirmation of every stay"] },
+            { icon: "/images/3d/briefcase.png", title: "Corporate apartments", bullets: ["Professionally furnished and cleaned", "Move-in ready from day one", "Flexible 30+ day terms"] },
+            { icon: "/images/3d/laptop.png", title: "Work-ready", bullets: ["High-speed Wi‑Fi set up before arrival", "Space to focus and decompress", "Utilities typically included"] },
+            { icon: "/images/3d/map.png", title: "Right neighborhood", bullets: ["Manhattan business districts", "Brooklyn options as inventory grows", "Transit-friendly buildings"] },
           ]}
         />
       </Section>

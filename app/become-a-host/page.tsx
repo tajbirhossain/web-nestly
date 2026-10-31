@@ -38,10 +38,10 @@ export default function HostPage() {
         <Heading center kicker="Hosting, elevated" title="Quality guests, longer stays, less chaos" />
         <FeatureCards
           items={[
-            { icon: "/images/icons/efforless-booking.png", title: "Longer stays", bullets: ["Guests booking 30+ days", "Not weekend turnovers", "Steadier occupancy"] },
-            { icon: "/images/icons/curated-space.png", title: "Manual approval", bullets: ["We review every host", "Nestly stays trusted for guests", "Quality listings only"] },
-            { icon: "/images/icons/neighborhood-access.png", title: "Simple tools", bullets: ["Manage listings after approval", "Photos, pricing and availability", "Requests come to you"] },
-            { icon: "/images/icons/wifi-included.png", title: "Corporate & relocation guests", bullets: ["Business travelers and movers", "Clear expectations up front", "Personal booking support"] },
+            { icon: "/images/3d/calendar.png", title: "Longer stays", bullets: ["Guests booking 30+ days", "Not weekend turnovers", "Steadier occupancy"] },
+            { icon: "/images/3d/sparkles.png", title: "Manual approval", bullets: ["We review every host", "Nestly stays trusted for guests", "Quality listings only"] },
+            { icon: "/images/3d/laptop.png", title: "Simple tools", bullets: ["Manage listings after approval", "Photos, pricing and availability", "Requests come to you"] },
+            { icon: "/images/3d/briefcase.png", title: "Corporate & relocation guests", bullets: ["Business travelers and movers", "Clear expectations up front", "Personal booking support"] },
           ]}
         />
       </Section>
@@ -52,7 +52,7 @@ export default function HostPage() {
           {hostSteps.map((h, i) => (
             <li key={h.title} className="flex items-center gap-5 rounded-3xl bg-white p-6">
               <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-brand-tint">
-                <Image src={h.icon} alt="" width={28} height={28} className="h-7 w-7 object-contain" />
+                <Image src={h.icon} alt="" width={96} height={96} className="h-9 w-9 object-contain" />
               </span>
               <span>
                 <span className="text-xs font-semibold uppercase tracking-widest text-brand">Step {i + 1}</span>
