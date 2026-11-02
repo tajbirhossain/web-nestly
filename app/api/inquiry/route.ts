@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { allowsChildren, getApartment, termsOf } from "@/lib/data";
+import { allowsChildren, termsOf } from "@/lib/data";
+import { getApartment } from "@/lib/listings";
+import { saveSubmission } from "@/lib/submissions";
 
 const allowed = new Set(["contact", "booking", "host", "corporate", "relocation", "newsletter"]);
 
@@ -25,7 +27,7 @@ export async function POST(req: Request) {
     if (![adults, children].every((n) => Number.isInteger(n) && n >= 0 && n <= 10)) {
       return NextResponse.json({ error: "Invalid guest count" }, { status: 422 });
     }
-    const apt = body.apartment ? getApartment(body.apartment) : undefined;
+    const apt = body.apartment ? await getApartment(body.apartment) : undefined;
     if (children > 0 && apt && !allowsChildren(apt)) {
       return NextResponse.json({ error: "This home does not allow children" }, { status: 422 });
     }
@@ -33,7 +35,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: `This home sleeps up to ${termsOf(apt).maxGuests} guests` }, { status: 422 });
     }
   }
-  // TODO: deliver to hello@nestly.nyc (Resend/SMTP) or store in a CRM.
-  console.log("[inquiry]", type, { name, email });
+  // Stored in the database so it shows up in the admin. TODO: also email hello@nestly.nyc (Resend/SMTP).
+  try {
+    const stored = await saveSubmission(type, body, name);
+    if (!stored) console.log("[inquiry] no database configured, not stored:", type, { name, email });
+  } catch (e) {
+    console.error("[inquiry] could not store submission:", e);
+    return NextResponse.json({ error: "We couldn't save your request. Please try again." }, { status: 500 });
+  }
   return NextResponse.json({ ok: true });
 }

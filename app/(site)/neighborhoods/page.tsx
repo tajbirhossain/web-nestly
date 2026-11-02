@@ -2,14 +2,16 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { CtaBand, Heading, PageHero, Section } from "@/components/sections";
-import { apartments, boroughs, money, neighborhoods } from "@/lib/data";
+import { boroughs, money, neighborhoods } from "@/lib/data";
+import { getApartments } from "@/lib/listings";
 
 export const metadata: Metadata = {
   title: "NYC neighborhoods",
   description: "Choose Nestly apartments by area — Upper East Side to New Jersey.",
 };
 
-export default function NeighborhoodsPage() {
+export default async function NeighborhoodsPage() {
+  const apartments = await getApartments();
   return (
     <>
       <PageHero

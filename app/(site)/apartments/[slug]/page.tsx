@@ -12,15 +12,17 @@ import ListingActions from "@/components/ListingActions";
 import MapView from "@/components/MapView";
 import SectionNav from "@/components/SectionNav";
 import { SqftIcon } from "@/components/ui/icons";
-import { allowsChildren, apartments, cancellationInfo, termsOf, money, bedLabel, bedroomRows, features, getApartment, neighborhoods } from "@/lib/data";
+import { allowsChildren, apartments as sampleHomes, cancellationInfo, termsOf, money, bedLabel, bedroomRows, features, neighborhoods } from "@/lib/data";
+import { getApartment, getApartments } from "@/lib/listings";
 
+// Pre-render the sample homes; anything added in the admin renders on first request.
 export function generateStaticParams() {
-  return apartments.map((a) => ({ slug: a.slug }));
+  return sampleHomes.map((a) => ({ slug: a.slug }));
 }
 
 export async function generateMetadata({ params }: PageProps<"/apartments/[slug]">): Promise<Metadata> {
   const { slug } = await params;
-  const apt = getApartment(slug);
+  const apt = await getApartment(slug);
   return apt ? { title: apt.title, description: apt.about[0] } : {};
 }
 
@@ -58,10 +60,10 @@ function ApartmentSkeleton() {
 
 async function Apartment({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const apt = getApartment(slug);
+  const apt = await getApartment(slug);
   if (!apt) notFound();
 
-  const similar = apartments.filter((a) => a.slug !== apt.slug).slice(0, 3);
+  const similar = (await getApartments()).filter((a) => a.slug !== apt.slug).slice(0, 3);
   const terms = termsOf(apt);
   const hood = neighborhoods.find((n) => n.name === apt.neighborhood);
 

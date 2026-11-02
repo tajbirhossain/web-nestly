@@ -5,13 +5,14 @@ import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { NOW, slugify, uid } from "@/lib/admin/format";
 import { actions, useDB } from "@/lib/admin/store";
+import { uploadImage } from "@/lib/admin/upload";
 import type { Listing, ListingStatus } from "@/lib/admin/types";
 import { boroughs, cancellationInfo, featureFilters, type Borough, type Cancellation } from "@/lib/data";
 import { useFeedback } from "./feedback";
 import { Icon } from "./icons";
 import { EmptyState, Field, PageHeader } from "./ui";
 
-// Photo upload needs storage; until then listings pick from the site's image library.
+// Listings can use uploaded photos (Vercel Blob) or the site's built-in image library.
 const library = [
   "nyc-apartment-living", "furnished-interior", "modern-workspace", "nyc-skyline-apt",
   "nyc-neighborhood", "apartment-main", "feature-img",
@@ -74,6 +75,28 @@ function ListingForm({ listing }: { listing?: Listing }) {
     setErrors((e) => ({ ...e, [k]: undefined }));
   };
   const toggle = (k: "images" | "amenities", v: string) => set(k, f[k].includes(v) ? f[k].filter((x) => x !== v) : [...f[k], v]);
+  const [uploading, setUploading] = useState(0);
+
+  async function onFiles(files: FileList | null) {
+    if (!files?.length) return;
+    const list = Array.from(files);
+    setUploading((n) => n + list.length);
+    const urls: string[] = [];
+    for (const file of list) {
+      try {
+        urls.push(await uploadImage(file));
+      } catch (err) {
+        toast(err instanceof Error ? err.message : "Upload failed", "bad");
+      } finally {
+        setUploading((n) => n - 1);
+      }
+    }
+    if (urls.length) {
+      setF((p) => ({ ...p, images: [...p.images, ...urls] }));
+      setErrors((e) => ({ ...e, images: undefined }));
+      toast(`${urls.length} photo${urls.length > 1 ? "s" : ""} uploaded`);
+    }
+  }
 
   function save(statusOverride?: ListingStatus) {
     const e: typeof errors = {};
@@ -96,6 +119,10 @@ function ListingForm({ listing }: { listing?: Listing }) {
     let slug = listing?.slug ?? slugify(f.title);
     if (!listing && db.listings.some((l) => l.slug === slug)) slug = `${slug}-${uid("").slice(1, 5)}`;
     const next: Listing = {
+      address: listing?.address,
+      lat: listing?.lat,
+      lng: listing?.lng,
+      highlights: listing?.highlights,
       id: listing?.id ?? slug,
       slug,
       title: f.title.trim(),
@@ -251,9 +278,23 @@ function ListingForm({ listing }: { listing?: Listing }) {
 
           <section className="a-card p-5">
             <h2 className="text-lg">Photos</h2>
-            <p className="mb-3 text-muted">The first selected photo is the cover. Uploads arrive with file storage — for now, pick from the image library.</p>
+            <p className="mb-3 text-muted">The first selected photo is the cover. Upload your own or pick from the image library; click a photo to select or deselect it.</p>
+            <label className="a-btn a-btn-outline mb-3 cursor-pointer">
+              <Icon name="plus" size={16} /> {uploading ? `Uploading ${uploading}…` : "Upload photos"}
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                className="sr-only"
+                disabled={uploading > 0}
+                onChange={(e) => {
+                  void onFiles(e.target.files);
+                  e.target.value = "";
+                }}
+              />
+            </label>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {library.map((src) => {
+              {[...f.images.filter((s) => !library.includes(s)), ...library].map((src) => {
                 const idx = f.images.indexOf(src);
                 const on = idx >= 0;
                 return (

@@ -16,6 +16,11 @@ export type Listing = {
   featured: boolean;
   /** When false the public site hides this home from searches that include children. */
   childrenAllowed: boolean;
+  /** Map position and extras carried over from the public site; optional for listings created in the admin. */
+  address?: string;
+  lat?: number;
+  lng?: number;
+  highlights?: string[];
   images: string[];
   description: string;
   amenities: string[];

@@ -4,7 +4,8 @@ import ApartmentCard from "@/components/ApartmentCard";
 import ReviewsCarousel from "@/components/ReviewsCarousel";
 import SearchBar from "@/components/SearchBar";
 import { CtaBand, Heading, Section } from "@/components/sections";
-import { apartments, features, hostSteps, lifestyles, logos, neighborhoods, posts, reviews, steps } from "@/lib/data";
+import { getApartments } from "@/lib/listings";
+import { features, hostSteps, lifestyles, logos, neighborhoods, posts, reviews, steps } from "@/lib/data";
 
 const stories = [
   { title: "New city, zero stress with Nestly", by: "Guest, Marcus K.", image: "/images/stock/story1.jpg" },
@@ -12,7 +13,8 @@ const stories = [
   { title: "Making space for what matters most", by: "Guest, Elena Rostova", image: "/images/stock/story3.jpg" },
 ];
 
-export default function Home() {
+export default async function Home() {
+  const apartments = await getApartments();
   return (
     <>
       {/* Hero */}

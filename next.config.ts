@@ -5,6 +5,8 @@ const nextConfig: NextConfig = {
   experimental: {
     agentFeedback: true,
   },
+  // Photos uploaded from the admin live in Vercel Blob.
+  images: { remotePatterns: [{ protocol: "https", hostname: "*.public.blob.vercel-storage.com" }] },
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {

@@ -8,7 +8,7 @@ import MapView from "@/components/MapView";
 import Select from "@/components/ui/Select";
 import { DatesPicker, GuestsPicker, guestTotal, noGuests, type Guests } from "@/components/ui/Pickers";
 import { HeartIcon } from "@/components/ui/icons";
-import { PRICE_MAX, PRICE_MIN, allowsChildren, apartments, areaOptions, capacity } from "@/lib/data";
+import { PRICE_MAX, PRICE_MIN, allowsChildren, areaOptions, capacity, type Apartment } from "@/lib/data";
 import { useSaved } from "@/lib/saved";
 
 const sortOptions = [
@@ -18,7 +18,7 @@ const sortOptions = [
   { value: "soon", label: "Available soonest" },
 ];
 
-export default function ApartmentsExplorer({ children }: { children?: ReactNode }) {
+export default function ApartmentsExplorer({ apartments, children }: { apartments: Apartment[]; children?: ReactNode }) {
   const sp = useSearchParams();
   const { saved } = useSaved();
   const [area, setArea] = useState(sp.get("area") ?? "");
@@ -47,8 +47,9 @@ export default function ApartmentsExplorer({ children }: { children?: ReactNode 
         (!baths || (baths === "3" ? a.baths >= 3 : a.baths === Number(baths))) &&
         (!partySize || capacity(a) >= partySize) &&
         (!guests.children || allowsChildren(a)) &&
-        a.price >= price[0] &&
-        a.price <= price[1] &&
+        // Slider ends are open-ended so admin-added homes outside the sample price range still show.
+        (price[0] <= PRICE_MIN || a.price >= price[0]) &&
+        (price[1] >= PRICE_MAX || a.price <= price[1]) &&
         features.every((f) => a.amenities.includes(f)) &&
         (!onlySaved || saved.includes(a.slug)),
     );
@@ -57,7 +58,7 @@ export default function ApartmentsExplorer({ children }: { children?: ReactNode 
     if (sort === "soon") list.sort((a, b) => a.availableFrom.localeCompare(b.availableFrom));
     if (sort === "featured") list.sort((a, b) => Number(!!b.featured) - Number(!!a.featured));
     return list;
-  }, [area, guests, partySize, filters, sort, onlySaved, saved]);
+  }, [apartments, area, guests, partySize, filters, sort, onlySaved, saved]);
 
   const priceActive = filters.price[0] > PRICE_MIN || filters.price[1] < PRICE_MAX;
   const filterCount = [filters.beds, filters.baths].filter(Boolean).length + filters.features.length + (priceActive ? 1 : 0);

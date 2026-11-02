@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { signOut, useDB, useSession } from "@/lib/admin/store";
+import { signOut, useDB, useDBStatus, useSession } from "@/lib/admin/store";
 import { FeedbackProvider } from "./feedback";
 import { Icon, type IconName } from "./icons";
 
@@ -14,12 +14,13 @@ type NavItem = { href: string; label: string; icon: IconName; badge?: number };
 export default function Shell({ children }: { children: ReactNode }) {
   const session = useSession();
   const router = useRouter();
+  const { ready } = useDBStatus();
 
   useEffect(() => {
     if (session === false) router.replace("/admin/login");
   }, [session, router]);
 
-  if (!session) {
+  if (!session || !ready) {
     return (
       <div className="grid min-h-screen place-items-center text-muted" role="status">
         Loading…
@@ -37,6 +38,7 @@ function Frame({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const db = useDB();
+  const status = useDBStatus();
   const [open, setOpen] = useState(false);
   const [prevPath, setPrevPath] = useState(pathname);
 
@@ -134,6 +136,13 @@ function Frame({ children }: { children: ReactNode }) {
             <Icon name="menu" size={20} />
           </button>
           <div className="flex-1" />
+          <span
+            className="hidden items-center gap-1.5 text-xs text-muted sm:inline-flex"
+            title={status.remote ? "Edits are saved to the Neon database" : "No DATABASE_URL set — edits are saved in this browser only"}
+          >
+            <span className={`h-2 w-2 rounded-full ${status.error ? "bg-bad" : status.remote ? "bg-ok" : "bg-warn"}`} />
+            {status.remote ? "Neon database" : "Local demo data"}
+          </span>
           <Link href="/" target="_blank" className="a-btn a-btn-ghost a-btn-sm">
             View site <Icon name="external" size={14} />
           </Link>
@@ -148,6 +157,11 @@ function Frame({ children }: { children: ReactNode }) {
             <Icon name="logout" size={15} /> Sign out
           </button>
         </header>
+        {status.error && (
+          <div role="alert" className="border-b border-line bg-bad-tint px-4 py-2.5 text-sm text-bad sm:px-6">
+            Couldn’t sync with the database: {status.error}. Check DATABASE_URL and that `npm run db:setup` has been run.
+          </div>
+        )}
         <main className="mx-auto w-full max-w-[1200px] flex-1 px-4 py-6 sm:px-6 sm:py-8">{children}</main>
       </div>
     </div>

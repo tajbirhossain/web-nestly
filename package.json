@@ -6,9 +6,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:setup": "node --env-file=.env.local scripts/db-setup.mjs"
   },
   "dependencies": {
+    "@neon/config": "^1.10.0",
+    "@neon/env": "^1.6.8",
+    "@neondatabase/serverless": "^1.2.0",
+    "@vercel/blob": "^2.8.2",
     "leaflet": "^1.9.4",
     "next": "16.4.3",
     "react": "19.3.0",
@@ -22,6 +27,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.4.3",
+    "neon": "^8.16.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
