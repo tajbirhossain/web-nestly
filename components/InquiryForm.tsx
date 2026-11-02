@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Select from "@/components/ui/Select";
-import { DatesPicker, GuestsPicker } from "@/components/ui/Pickers";
+import { DatesPicker, GuestsPicker, guestTotal, noGuests } from "@/components/ui/Pickers";
 
 type Field = {
   name: string;
@@ -14,6 +14,8 @@ type Field = {
   half?: boolean;
   /** Custom controls: a check-in/out range (writes movein + moveout) or a guest stepper. */
   kind?: "dates" | "guests";
+  /** For kind "guests": a single adults-only count (e.g. team size) instead of adults + children. */
+  adultsOnly?: boolean;
 };
 
 export default function InquiryForm({
@@ -34,14 +36,14 @@ export default function InquiryForm({
   const [picked, setPicked] = useState<Record<string, string>>({});
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
-  const [guests, setGuests] = useState(0);
+  const [guests, setGuests] = useState(noGuests);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const missing = fields.find(
       (f) =>
         f.required &&
-        ((f.options && !picked[f.name]) || (f.kind === "dates" && !(start && end)) || (f.kind === "guests" && !guests)),
+        ((f.options && !picked[f.name]) || (f.kind === "dates" && !(start && end)) || (f.kind === "guests" && !guestTotal(guests))),
     );
     if (missing) {
       setError(`Please choose ${missing.kind === "dates" ? "your check-in and check-out dates" : missing.label.toLowerCase()}.`);
@@ -97,7 +99,7 @@ export default function InquiryForm({
                 panelClass="w-[720px]"
               />
             ) : f.kind === "guests" ? (
-              <GuestsPicker name={f.name} value={guests} onChange={setGuests} variant="field" placeholder="Add guests" align="left" />
+              <GuestsPicker name={f.name} value={guests} onChange={setGuests} variant="field" placeholder="Add guests" align="left" childPolicy={f.adultsOnly ? "hidden" : "allow"} />
             ) : f.options ? (
               <Select
                 name={f.name}

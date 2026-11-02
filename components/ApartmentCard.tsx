@@ -5,7 +5,7 @@ import Link from "next/link";
 import CardGallery from "@/components/CardGallery";
 import { HeartIcon, SqftIcon } from "@/components/ui/icons";
 import { fmtShort } from "@/components/ui/dates";
-import { bedLabel, money, type Apartment } from "@/lib/data";
+import { allowsChildren, bedLabel, money, type Apartment } from "@/lib/data";
 import { useSaved } from "@/lib/saved";
 
 export default function ApartmentCard({
@@ -87,6 +87,7 @@ export default function ApartmentCard({
           {apt.address ? `${apt.address} · ` : ""}
           {apt.neighborhood}, {apt.borough}
         </p>
+        {!allowsChildren(apt) && <p className="mt-1.5 text-xs font-medium text-muted">Adults only · no children</p>}
       </div>
     </article>
   );

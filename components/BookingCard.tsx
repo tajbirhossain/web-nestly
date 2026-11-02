@@ -4,14 +4,30 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import InquiryForm from "@/components/InquiryForm";
 import Modal from "@/components/ui/Modal";
-import { DatesPicker, GuestsPicker } from "@/components/ui/Pickers";
+import { DatesPicker, GuestsPicker, guestLabel, guestTotal, noGuests } from "@/components/ui/Pickers";
 import { fmtShort, fromISO, nightsBetween } from "@/components/ui/dates";
-import { money } from "@/lib/data";
+import { money, type Terms } from "@/lib/data";
 
-export default function BookingCard({ slug, title, price, availableFrom }: { slug: string; title: string; price: number; availableFrom: string }) {
+export default function BookingCard({
+  slug,
+  title,
+  price,
+  availableFrom,
+  childrenAllowed = true,
+  terms,
+}: {
+  slug: string;
+  title: string;
+  price: number;
+  availableFrom: string;
+  childrenAllowed?: boolean;
+  terms: Pick<Terms, "cleaningFee" | "securityDeposit" | "maxGuests" | "minGuestAge">;
+}) {
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
-  const [guests, setGuests] = useState(0);
+  const [picked, setGuests] = useState(noGuests);
+  // Homes that block children always book with zero children, whatever was picked.
+  const guests = childrenAllowed ? picked : { ...picked, children: 0 };
   const [open, setOpen] = useState(false);
   const picker = useRef<HTMLDivElement>(null);
 
@@ -20,7 +36,8 @@ export default function BookingCard({ slug, title, price, availableFrom }: { slu
   const fullMonths = Math.floor(nights / 30);
   const extraNights = nights - fullMonths * 30;
   const extraCost = Math.round((price * extraNights) / 30);
-  const total = price * fullMonths + extraCost;
+  const rent = price * fullMonths + extraCost;
+  const total = rent + terms.cleaningFee;
 
   return (
     <div className="space-y-3">
@@ -35,7 +52,9 @@ export default function BookingCard({ slug, title, price, availableFrom }: { slu
 
         <div ref={picker} className="mt-4 space-y-2.5">
           <DatesPicker start={start} end={end} onChange={(s, e) => { setStart(s); setEnd(e); }} variant="field" placeholder="Select dates" align="right" panelClass="w-[720px]" />
-          <GuestsPicker value={guests} onChange={setGuests} variant="field" placeholder="Guests" align="right" />
+          <GuestsPicker value={guests} onChange={setGuests} variant="field" placeholder="Guests" align="right" childPolicy={childrenAllowed ? "allow" : "blocked"} max={terms.maxGuests} />
+          {!childrenAllowed && <p className="px-1 text-xs text-muted">Adults only — this home doesn&apos;t allow children.</p>}
+          <p className="px-1 text-xs text-muted">Sleeps up to {terms.maxGuests} · primary guest {terms.minGuestAge}+</p>
         </div>
 
         {nights >= 30 ? (
@@ -45,8 +64,10 @@ export default function BookingCard({ slug, title, price, availableFrom }: { slu
             {extraNights > 0 && (
               <div className="flex justify-between"><dt className="text-muted">{extraNights} extra night{extraNights > 1 ? "s" : ""}</dt><dd>{money(extraCost)}</dd></div>
             )}
+            <div className="flex justify-between"><dt className="text-muted">Cleaning fee (one-time)</dt><dd>{money(terms.cleaningFee)}</dd></div>
             <div className="flex justify-between border-t border-line pt-2 font-medium"><dt>Estimated total</dt><dd className="font-serif text-lg">{money(total)}</dd></div>
-            <p className="text-xs text-muted">Utilities &amp; Wi‑Fi typically included. Nestly confirms the final total with you — nothing is charged online.</p>
+            <div className="flex justify-between rounded-xl bg-soft px-3 py-2"><dt className="text-muted">Refundable security deposit</dt><dd className="font-medium">{money(terms.securityDeposit)}</dd></div>
+            <p className="text-xs text-muted">The deposit is held separately and returned after move-out if there is no damage. Utilities &amp; Wi‑Fi typically included. Nestly confirms the final total with you — nothing is charged online.</p>
           </dl>
         ) : (
           <p className="mt-4 text-sm text-muted">Add your dates to see an estimated total.</p>
@@ -72,12 +93,12 @@ export default function BookingCard({ slug, title, price, availableFrom }: { slu
         <p className="mb-5 rounded-2xl bg-brand-tint p-4 text-sm">
           <strong className="font-medium">{title}</strong>
           <br />
-          {fmtShort(start || availableFrom)} – {end ? fmtShort(end) : "—"} · {nights} nights · est. {money(total)}
+          {fmtShort(start || availableFrom)} – {end ? fmtShort(end) : "—"} · {nights} nights{guestTotal(guests) ? ` · ${guestLabel(guests)}` : ""} · est. {money(total)}
         </p>
         <InquiryForm
           type="booking"
           submitLabel="Send request"
-          extra={{ apartment: slug, movein: start, moveout: end, guests: String(guests || "") }}
+          extra={{ apartment: slug, movein: start, moveout: end, guests: String(guestTotal(guests) || ""), adults: String(guests.adults || ""), children: String(guests.children || "") }}
           successText="We'll review availability and email you to finalize your stay."
           fields={[
             { name: "firstName", label: "First name", required: true, half: true },

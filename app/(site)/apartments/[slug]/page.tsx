@@ -12,7 +12,7 @@ import ListingActions from "@/components/ListingActions";
 import MapView from "@/components/MapView";
 import SectionNav from "@/components/SectionNav";
 import { SqftIcon } from "@/components/ui/icons";
-import { apartments, bedLabel, bedroomRows, features, getApartment, neighborhoods } from "@/lib/data";
+import { allowsChildren, apartments, cancellationInfo, termsOf, money, bedLabel, bedroomRows, features, getApartment, neighborhoods } from "@/lib/data";
 
 export function generateStaticParams() {
   return apartments.map((a) => ({ slug: a.slug }));
@@ -62,6 +62,7 @@ async function Apartment({ params }: { params: Promise<{ slug: string }> }) {
   if (!apt) notFound();
 
   const similar = apartments.filter((a) => a.slug !== apt.slug).slice(0, 3);
+  const terms = termsOf(apt);
   const hood = neighborhoods.find((n) => n.name === apt.neighborhood);
 
   return (
@@ -169,12 +170,24 @@ async function Apartment({ params }: { params: Promise<{ slug: string }> }) {
 
           <section id="rules" className={section}>
             <h2 className={`${h2} mb-5`}>Booking &amp; stay rules</h2>
+            {terms.specialInstructions && (
+              <div className="mb-5 rounded-2xl border border-[#e3e3ff] bg-brand-tint p-5">
+                <p className="font-medium text-brand">Special instructions from the host</p>
+                <p className="mt-1 text-[15px] leading-relaxed">{terms.specialInstructions}</p>
+              </div>
+            )}
             <dl className="grid gap-5 sm:grid-cols-2">
               {[
                 ["Minimum stay", "30 nights. Longer stays are welcome."],
+                ["Fees & deposit", `One-time cleaning fee of ${money(terms.cleaningFee)}. Refundable security deposit of ${money(terms.securityDeposit)}, returned after move-out if there is no damage.`],
+                ["Utilities", terms.utilitiesIncluded ? "Utilities and Wi‑Fi are included in the monthly rent." : "Utilities are not included in the rent. We confirm typical costs when we follow up."],
+                ["Check-in & check-out", `Check-in from ${terms.checkInTime}. Check-out by ${terms.checkOutTime}.`],
+                ["Guests", `Sleeps up to ${terms.maxGuests} guests. The primary guest must be ${terms.minGuestAge} or older.`],
+                ["Children", allowsChildren(apt) ? "Children of all ages are welcome. Add them to your guest count when you request to book." : "This home is adults only — children are not allowed. Browse other homes if you are travelling with kids."],
+                ["Smoking", terms.smokingAllowed ? "Smoking is allowed in designated areas." : "No smoking anywhere in the home."],
+                ["Parties & events", terms.partiesAllowed ? "Small gatherings are fine. Please respect your neighbors." : "No parties or events."],
+                ["Cancellation", `${cancellationInfo[terms.cancellation].label}: ${cancellationInfo[terms.cancellation].text}`],
                 ["How booking works", "Pick your dates and send a request. Nestly confirms availability personally — no instant checkout."],
-                ["Included", "Utilities and Wi‑Fi are typically included. We confirm details when we follow up."],
-                ["Move-in", "Furnished, professionally cleaned, with linens and kitchen essentials ready."],
               ].map(([t, d]) => (
                 <div key={t} className="rounded-2xl border border-line p-5">
                   <dt className="font-medium">{t}</dt>
@@ -186,7 +199,7 @@ async function Apartment({ params }: { params: Promise<{ slug: string }> }) {
         </div>
 
         <aside className="pt-8 lg:sticky lg:top-40 lg:self-start">
-          <BookingCard slug={apt.slug} title={apt.title} price={apt.price} availableFrom={apt.availableFrom} />
+          <BookingCard slug={apt.slug} title={apt.title} price={apt.price} availableFrom={apt.availableFrom} childrenAllowed={allowsChildren(apt)} terms={terms} />
         </aside>
       </div>
     </div>

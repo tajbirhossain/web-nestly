@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { Fraunces, Roboto } from "next/font/google";
 import "./globals.css";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 
 const fraunces = Fraunces({ variable: "--font-fraunces", subsets: ["latin"] });
 const roboto = Roboto({
@@ -25,9 +23,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" data-scroll-behavior="smooth" className={`${fraunces.variable} ${roboto.variable} h-full`}>
       <body className="min-h-full flex flex-col">
-        <Header />
-        <main className="flex-1">{children}</main>
-        <Footer />
+        {children}
       </body>
     </html>
   );

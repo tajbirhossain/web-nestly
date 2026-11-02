@@ -61,7 +61,7 @@ export default function CorporatePage() {
                 { name: "name", label: "Name", required: true, half: true },
                 { name: "email", label: "Work email", type: "email", required: true, half: true },
                 { name: "company", label: "Company", half: true },
-                { name: "headcount", label: "Team size", kind: "guests", half: true },
+                { name: "headcount", label: "Team size", kind: "guests", adultsOnly: true, half: true },
                 { name: "stay", label: "Dates", kind: "dates" },
                 { name: "message", label: "Preferred neighborhoods & notes", textarea: true },
               ]}

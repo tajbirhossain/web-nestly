@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Select from "@/components/ui/Select";
-import { DatesPicker, GuestsPicker } from "@/components/ui/Pickers";
+import { DatesPicker, GuestsPicker, guestTotal, noGuests } from "@/components/ui/Pickers";
 import { areaOptions } from "@/lib/data";
 
 export default function SearchBar() {
@@ -11,7 +11,7 @@ export default function SearchBar() {
   const [area, setArea] = useState("");
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
-  const [guests, setGuests] = useState(0);
+  const [guests, setGuests] = useState(noGuests);
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -19,7 +19,10 @@ export default function SearchBar() {
     if (area) params.set("area", area);
     if (start) params.set("movein", start);
     if (end) params.set("moveout", end);
-    if (guests) params.set("guests", String(guests));
+    if (guestTotal(guests)) {
+      params.set("adults", String(guests.adults));
+      if (guests.children) params.set("children", String(guests.children));
+    }
     router.push(`/apartments${params.size ? `?${params}` : ""}`);
   }
 

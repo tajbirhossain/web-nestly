@@ -1,0 +1,81 @@
+/* Admin panel styles — scoped under .admin so the public site is unaffected. */
+.admin {
+  --a-bg: #f6f6f9;
+  --ok: #12804a;
+  --ok-tint: #e3f6ec;
+  --warn: #9a5b00;
+  --warn-tint: #fdf0d9;
+  --bad: #c0262d;
+  --bad-tint: #fde8e9;
+  background: var(--a-bg);
+  color: var(--foreground);
+  font-size: 14px;
+}
+
+.admin .a-card { background: #fff; border: 1px solid var(--line); border-radius: 16px; }
+
+.admin .a-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 40px; padding: 0 16px; border-radius: 10px;
+  font-weight: 500; font-size: 14px; border: 1px solid transparent;
+  cursor: pointer; white-space: nowrap;
+  transition: background .15s, border-color .15s, color .15s;
+}
+.admin .a-btn:disabled { opacity: .5; cursor: not-allowed; }
+.admin .a-btn-sm { min-height: 32px; padding: 0 12px; font-size: 13px; border-radius: 8px; }
+.admin .a-btn-primary { background: var(--brand); color: #fff; }
+.admin .a-btn-primary:hover:not(:disabled) { background: var(--brand-dark); }
+.admin .a-btn-outline { background: #fff; color: var(--foreground); border-color: var(--line); }
+.admin .a-btn-outline:hover:not(:disabled) { background: var(--soft); border-color: #d5d5df; }
+.admin .a-btn-ghost { background: transparent; color: var(--muted); }
+.admin .a-btn-ghost:hover:not(:disabled) { background: var(--soft); color: var(--foreground); }
+.admin .a-btn-danger { background: #fff; color: var(--bad); border-color: #f3c4c7; }
+.admin .a-btn-danger:hover:not(:disabled) { background: var(--bad-tint); }
+.admin .a-btn-danger-solid { background: var(--bad); color: #fff; }
+.admin .a-btn-danger-solid:hover:not(:disabled) { background: #a21e24; }
+.admin .a-btn-ok { background: var(--ok); color: #fff; }
+.admin .a-btn-ok:hover:not(:disabled) { background: #0e6a3d; }
+
+.admin .a-input {
+  width: 100%; min-height: 40px; padding: 0 12px; background: #fff;
+  border: 1px solid var(--line); border-radius: 10px; font-size: 14px; color: var(--foreground);
+  transition: border-color .15s, box-shadow .15s;
+}
+.admin textarea.a-input { padding: 10px 12px; min-height: 96px; resize: vertical; line-height: 1.5; }
+.admin .a-input:hover { border-color: #d0d0dc; }
+.admin .a-input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgba(92,92,255,.18); }
+.admin .a-label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; }
+.admin .a-hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.admin .a-error { font-size: 12px; color: var(--bad); margin-top: 4px; }
+
+.admin .a-badge {
+  display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px;
+  border-radius: 999px; font-size: 12px; font-weight: 500; line-height: 20px; white-space: nowrap;
+}
+.admin .a-badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+.admin .a-table-wrap { overflow-x: auto; position: relative; }
+.admin .a-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.admin .a-table th {
+  text-align: left; font-size: 12px; font-weight: 500; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .04em; padding: 10px 16px;
+  background: var(--soft); border-bottom: 1px solid var(--line); white-space: nowrap;
+}
+.admin .a-table td { padding: 12px 16px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.admin .a-table tbody tr:last-child td { border-bottom: 0; }
+.admin .a-table tbody tr.is-click { cursor: pointer; }
+.admin .a-table tbody tr.is-click:hover td { background: #fafaff; }
+
+.admin .a-nav {
+  display: flex; align-items: center; gap: 12px; padding: 9px 12px; border-radius: 10px;
+  color: var(--muted); font-weight: 500; transition: background .15s, color .15s;
+}
+.admin .a-nav:hover { background: var(--soft); color: var(--foreground); }
+.admin .a-nav[aria-current="page"] { background: var(--brand-tint); color: var(--brand-dark); }
+
+.admin .a-anim-fade { animation: a-fade .15s ease-out; }
+.admin .a-anim-slide { animation: a-slide .2s ease-out; }
+.admin .a-anim-pop { animation: a-pop .18s ease-out; }
+@keyframes a-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes a-slide { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes a-pop { from { transform: translateY(8px) scale(.98); opacity: 0; } to { transform: none; opacity: 1; } }

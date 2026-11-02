@@ -23,7 +23,50 @@ export type Apartment = {
   highlights?: string[];
   amenities: string[];
   featured?: boolean;
+  /** Hosts can block children. Undefined means children are welcome. */
+  childrenAllowed?: boolean;
+  /** Per-listing fees and house rules. Anything omitted falls back to defaultTerms(). */
+  terms?: Partial<Terms>;
 };
+
+export type Cancellation = "flexible" | "moderate" | "strict";
+export const cancellationInfo: Record<Cancellation, { label: string; text: string }> = {
+  flexible: { label: "Flexible", text: "Free cancellation up to 14 days before move-in. After that, the first month's rent is non-refundable." },
+  moderate: { label: "Moderate", text: "Free cancellation up to 30 days before move-in. After that, the first month's rent is non-refundable." },
+  strict: { label: "Strict", text: "Free cancellation within 48 hours of confirming if move-in is 60+ days away. After that, the first month's rent is non-refundable." },
+};
+
+/** Fees, occupancy and house rules shown on a listing and used when booking. */
+export type Terms = {
+  cleaningFee: number; // one-time, charged with the first month
+  securityDeposit: number; // refundable, held until move-out
+  utilitiesIncluded: boolean;
+  maxGuests: number;
+  minGuestAge: number; // minimum age of the primary guest
+  smokingAllowed: boolean;
+  partiesAllowed: boolean;
+  checkInTime: string;
+  checkOutTime: string;
+  cancellation: Cancellation;
+  specialInstructions: string;
+};
+
+/** Sensible starting terms for a home; sample data and new admin listings both begin here. */
+export const defaultTerms = (a: { beds: number; price: number }): Terms => ({
+  cleaningFee: [150, 200, 275][a.beds] ?? 350,
+  securityDeposit: a.price,
+  utilitiesIncluded: true,
+  maxGuests: Math.max(2, a.beds * 2),
+  minGuestAge: 18,
+  smokingAllowed: false,
+  partiesAllowed: false,
+  checkInTime: "3:00 PM",
+  checkOutTime: "11:00 AM",
+  cancellation: "moderate",
+  specialInstructions: "",
+});
+
+export const termsOf = (a: Pick<Apartment, "beds" | "price" | "terms">): Terms => ({ ...defaultTerms(a), ...a.terms });
 
 /** Amenities that can be filtered on (and get icons). Listings use these exact strings. */
 export const featureFilters = [
@@ -118,6 +161,7 @@ const listings: Apartment[] = [
     ],
     amenities: ["Wi‑Fi", "Air conditioning", "Fully equipped kitchen", "Towels & linens provided", "Heating", "Iron", "Hair dryer", "Refrigerator", "Wide screen TV"],
     featured: true,
+    terms: { securityDeposit: 3000, specialInstructions: "Doorman building — guests show ID at the front desk. Move-ins by appointment, weekdays 9 AM–5 PM." },
   },
   {
     slug: "2-bed-1bath-furnished-apartment-in-midtown-west",
@@ -164,6 +208,8 @@ const listings: Apartment[] = [
     ],
     amenities: ["Wi‑Fi", "Air conditioning", "Fully equipped kitchen", "Washer/dryer in unit", "Dedicated workspace", "Pets allowed"],
     featured: true,
+    childrenAllowed: false,
+    terms: { minGuestAge: 25, specialInstructions: "Quiet hours 10 PM–8 AM. Please remove shoes inside; the building has no elevator (4th-floor walk-up)." },
   },
   {
     slug: "cozy-studio-greenpoint",
@@ -182,6 +228,7 @@ const listings: Apartment[] = [
       "Quiet charm with skyline views — a smartly laid-out studio for a solo traveler or remote worker who wants to settle into a neighborhood.",
     ],
     amenities: ["Wi‑Fi", "Air conditioning", "Dedicated workspace", "Towels & linens provided"],
+    childrenAllowed: false,
   },
   {
     slug: "spacious-3-bedroom-concourse-bronx",
@@ -213,6 +260,7 @@ const listings: Apartment[] = [
     lat: 40.7178,
     lng: -74.0431,
     availableFrom: "2026-11-18",
+    terms: { cancellation: "strict", minGuestAge: 21, cleaningFee: 225 },
     images: [IMG.skyline, IMG.work, IMG.living, IMG.hood],
     about: [
       "A polished one bedroom on the Jersey City waterfront with skyline views and the PATH train to Manhattan minutes away.",
@@ -236,9 +284,10 @@ export const bedroomRows = (a: Apartment) =>
 /** Neighborhoods that currently have at least one listing, for filters. */
 export const listedAreas = [...new Set(apartments.map((a) => a.neighborhood))];
 
-/** Rough sleeping capacity (the WP ACF field is not in the export): 2 guests per bedroom, min 2. */
-export const capacity = (a: Apartment) => Math.max(2, a.beds * 2);
+/** Max guests: the listing's own limit, defaulting to 2 per bedroom (min 2) since the WP ACF field is not in the export. */
+export const capacity = (a: Apartment) => termsOf(a).maxGuests;
 
+export const allowsChildren = (a: Pick<Apartment, "childrenAllowed">) => a.childrenAllowed !== false;
 export const getApartment = (slug: string) => apartments.find((a) => a.slug === slug);
 export const bedLabel = (b: number) => (b === 0 ? "Studio" : `${b} Bed${b > 1 ? "s" : ""}`);
 export const money = (n: number) => `$${n.toLocaleString("en-US")}`;

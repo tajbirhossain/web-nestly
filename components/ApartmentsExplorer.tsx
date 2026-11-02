@@ -6,9 +6,9 @@ import ApartmentCard from "@/components/ApartmentCard";
 import FiltersModal, { emptyFilters, type FilterState } from "@/components/FiltersModal";
 import MapView from "@/components/MapView";
 import Select from "@/components/ui/Select";
-import { DatesPicker, GuestsPicker } from "@/components/ui/Pickers";
+import { DatesPicker, GuestsPicker, guestTotal, noGuests, type Guests } from "@/components/ui/Pickers";
 import { HeartIcon } from "@/components/ui/icons";
-import { PRICE_MAX, PRICE_MIN, apartments, areaOptions, capacity } from "@/lib/data";
+import { PRICE_MAX, PRICE_MIN, allowsChildren, apartments, areaOptions, capacity } from "@/lib/data";
 import { useSaved } from "@/lib/saved";
 
 const sortOptions = [
@@ -22,7 +22,13 @@ export default function ApartmentsExplorer({ children }: { children?: ReactNode 
   const sp = useSearchParams();
   const { saved } = useSaved();
   const [area, setArea] = useState(sp.get("area") ?? "");
-  const [guests, setGuests] = useState(Number(sp.get("guests") ?? 0));
+  const [guests, setGuests] = useState<Guests>(() => {
+    const children = Number(sp.get("children") ?? 0) || 0;
+    // `guests` is the legacy total-only param; treat it as adults.
+    const adults = Number(sp.get("adults") ?? sp.get("guests") ?? 0) || 0;
+    return children && !adults ? { adults: 1, children } : { adults, children };
+  });
+  const partySize = guestTotal(guests);
   const [start, setStart] = useState(sp.get("movein") ?? "");
   const [end, setEnd] = useState(sp.get("moveout") ?? "");
   const [filters, setFilters] = useState<FilterState>({ ...emptyFilters, beds: sp.get("beds") ?? "" });
@@ -39,7 +45,8 @@ export default function ApartmentsExplorer({ children }: { children?: ReactNode 
         (!area || a.borough === area || a.neighborhood === area) &&
         (!beds || (beds === "3" ? a.beds >= 3 : a.beds === Number(beds))) &&
         (!baths || (baths === "3" ? a.baths >= 3 : a.baths === Number(baths))) &&
-        (!guests || capacity(a) >= guests) &&
+        (!partySize || capacity(a) >= partySize) &&
+        (!guests.children || allowsChildren(a)) &&
         a.price >= price[0] &&
         a.price <= price[1] &&
         features.every((f) => a.amenities.includes(f)) &&
@@ -50,11 +57,11 @@ export default function ApartmentsExplorer({ children }: { children?: ReactNode 
     if (sort === "soon") list.sort((a, b) => a.availableFrom.localeCompare(b.availableFrom));
     if (sort === "featured") list.sort((a, b) => Number(!!b.featured) - Number(!!a.featured));
     return list;
-  }, [area, guests, filters, sort, onlySaved, saved]);
+  }, [area, guests, partySize, filters, sort, onlySaved, saved]);
 
   const priceActive = filters.price[0] > PRICE_MIN || filters.price[1] < PRICE_MAX;
   const filterCount = [filters.beds, filters.baths].filter(Boolean).length + filters.features.length + (priceActive ? 1 : 0);
-  const dirty = area || guests || start || filterCount || onlySaved;
+  const dirty = area || partySize || start || filterCount || onlySaved;
   const pins = results.map((a) => ({ slug: a.slug, title: a.title, price: a.price, lat: a.lat, lng: a.lng }));
 
   const map = (
@@ -106,7 +113,7 @@ export default function ApartmentsExplorer({ children }: { children?: ReactNode 
                 className="text-sm font-medium text-brand underline underline-offset-4"
                 onClick={() => {
                   setArea("");
-                  setGuests(0);
+                  setGuests(noGuests);
                   setStart("");
                   setEnd("");
                   setFilters(emptyFilters);
@@ -128,6 +135,7 @@ export default function ApartmentsExplorer({ children }: { children?: ReactNode 
             <strong className="font-medium text-ink">
               {results.length} {results.length === 1 ? "apartment" : "apartments"}
             </strong>
+            {guests.children ? " · homes that don't allow children are hidden" : ""}
             {start && end ? " · prices are monthly — we confirm availability for your dates after you request to book" : " · add dates to see an estimated total"}
           </p>
           {results.length ? (
