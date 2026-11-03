@@ -101,7 +101,7 @@ export function SearchBox({ value, onChange, placeholder }: { value: string; onC
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         aria-label={placeholder}
-        className="a-input pl-9"
+        className="a-input a-has-icon"
       />
     </div>
   );

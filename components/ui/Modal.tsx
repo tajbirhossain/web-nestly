@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 export default function Modal({
   open,
@@ -32,9 +33,11 @@ export default function Modal({
     };
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
 
-  return (
+  // Rendered on <body>: inside a sticky/transformed ancestor (like the booking card) the dialog would be
+  // trapped in that stacking context and slip under the sticky header and section nav.
+  return createPortal(
     <div className="fixed inset-0 z-[90] flex items-end justify-center sm:items-center sm:p-6" role="presentation">
       <button type="button" aria-label="Close dialog" tabIndex={-1} onClick={onClose} className="absolute inset-0 cursor-default bg-ink/55 backdrop-blur-[2px]" />
       <div
@@ -60,6 +63,7 @@ export default function Modal({
         <div className="flex-1 overflow-y-auto px-6 py-5">{children}</div>
         {footer && <footer className="flex items-center justify-between gap-4 border-t border-line px-6 py-4">{footer}</footer>}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

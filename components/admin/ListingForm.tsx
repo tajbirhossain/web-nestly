@@ -220,7 +220,7 @@ function ListingForm({ listing }: { listing?: Listing }) {
               onPoint={(la, ln) => setF((p) => ({ ...p, lat: la, lng: ln }))}
             />
             <Field label="Description" className="sm:col-span-2" hint="Separate paragraphs with a blank line.">
-              {(id) => <textarea id={id} className="a-input min-h-40" value={f.description} onChange={(e) => set("description", e.target.value)} />}
+              {(id) => <textarea id={id} className="a-input a-ta-md" value={f.description} onChange={(e) => set("description", e.target.value)} />}
             </Field>
           </section>
 

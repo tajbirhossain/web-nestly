@@ -42,6 +42,11 @@
   transition: border-color .15s, box-shadow .15s;
 }
 .admin textarea.a-input { padding: 10px 12px; min-height: 96px; resize: vertical; line-height: 1.5; }
+/* Modifiers live here, not as Tailwind utilities: this sheet is unlayered, so it would override them. */
+.admin .a-input.a-has-icon { padding-left: 36px; }
+.admin textarea.a-input.a-ta-sm { min-height: 80px; }
+.admin textarea.a-input.a-ta-md { min-height: 160px; }
+.admin textarea.a-input.a-ta-lg { min-height: 256px; }
 .admin .a-input:hover { border-color: #d0d0dc; }
 .admin .a-input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgba(92,92,255,.18); }
 .admin .a-label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; }

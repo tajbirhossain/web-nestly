@@ -60,3 +60,14 @@ Without the token, uploads show a clear error and the built-in image library sti
 New booking, inquiry and host requests email the support address from Admin → Settings (per the notify toggles), guests get an acknowledgement, and confirming or declining a booking or host application emails that person.
 
 Set `RESEND_API_KEY` and `EMAIL_FROM` (a sender on a domain verified in Resend, e.g. `Nestly <bookings@yourdomain.com>`) in Vercel and `.env.local`. Without them nothing is sent; messages are only logged.
+
+## Guest reviews (Sign in with Google)
+
+Guests write reviews on `/reviews` and on each listing page after signing in with Google. Reviews arrive as **pending** and appear on the site once approved in Admin → Reviews. One review per person per home, three per day, and a "Verified stay" badge appears when the reviewer's Google email matches a confirmed booking for that home. Only first name and last initial are shown publicly; the email stays private.
+
+Setup (one time):
+1. Google Cloud Console → APIs & Services → Credentials → **Create credentials → OAuth client ID** → type **Web application**.
+2. Under **Authorized JavaScript origins** add `http://localhost:3000` and your live URL (e.g. `https://web-nestly.vercel.app`). No redirect URI is needed.
+3. Copy the client ID into `NEXT_PUBLIC_GOOGLE_CLIENT_ID` in `.env.local` and in Vercel, then redeploy (it is inlined at build time).
+
+Without the client ID the review form shows "opening soon" and the API refuses submissions.

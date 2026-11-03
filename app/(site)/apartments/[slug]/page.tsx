@@ -14,8 +14,10 @@ import SectionNav from "@/components/SectionNav";
 import { SqftIcon } from "@/components/ui/icons";
 import { allowsChildren, apartments as sampleHomes, cancellationInfo, termsOf, money, bedLabel, bedroomRows, features } from "@/lib/data";
 import { buildNeighborhoods } from "@/lib/catalog";
+import ReviewForm from "@/components/ReviewForm";
 import { getBookedRanges } from "@/lib/availability";
 import { getApartment, getApartments } from "@/lib/listings";
+import { getReviews } from "@/lib/reviews";
 import { getSettings } from "@/lib/settings";
 
 // Pre-render the sample homes; anything added in the admin renders on first request.
@@ -37,6 +39,7 @@ const nav = [
   { id: "bedrooms", label: "The bedrooms" },
   { id: "offers", label: "What this home offers" },
   { id: "neighborhood", label: "Neighborhood" },
+  { id: "reviews", label: "Reviews" },
   { id: "similar", label: "Similar homes" },
   { id: "rules", label: "Booking & stay rules" },
 ];
@@ -68,7 +71,9 @@ async function Apartment({ params }: { params: Promise<{ slug: string }> }) {
   const apt = await getApartment(slug);
   if (!apt) notFound();
 
-  const [blocked, { bookingsOpen }] = await Promise.all([getBookedRanges(apt.slug), getSettings()]);
+  const [blocked, { bookingsOpen }, allReviews] = await Promise.all([getBookedRanges(apt.slug), getSettings(), getReviews()]);
+  const reviews = allReviews.filter((r) => r.listingSlug === apt.slug);
+  const avg = reviews.length ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length : 0;
   const similar = (await getApartments()).filter((a) => a.slug !== apt.slug).slice(0, 3);
   const terms = termsOf(apt);
   const hood = buildNeighborhoods(await getApartments()).find((n) => n.name === apt.neighborhood);
@@ -87,6 +92,12 @@ async function Apartment({ params }: { params: Promise<{ slug: string }> }) {
             <li>{apt.baths} Bath{apt.baths > 1 ? "s" : ""}</li>
             <li aria-hidden>·</li>
             <li className="flex items-center gap-1.5"><SqftIcon />{apt.sqft.toLocaleString()} ft²</li>
+            {reviews.length > 0 && (
+              <>
+                <li aria-hidden>·</li>
+                <li><a href="#reviews" className="hover:text-ink"><span className="text-amber-400">★</span> {avg.toFixed(1)} ({reviews.length} review{reviews.length > 1 ? "s" : ""})</a></li>
+              </>
+            )}
             {apt.address && (<><li aria-hidden>·</li><li>{apt.address}</li></>)}
           </ul>
           <ListingActions slug={apt.slug} title={apt.title} />
@@ -165,6 +176,30 @@ async function Apartment({ params }: { params: Promise<{ slug: string }> }) {
               <MapView pins={[{ slug: apt.slug, title: apt.title, price: apt.price, lat: apt.lat, lng: apt.lng }]} activeSlug={apt.slug} zoom={14} interactive={false} className="h-full w-full" />
             </div>
             <p className="mt-2 text-xs text-muted">Approximate location. The exact address is shared when your stay is confirmed.</p>
+          </section>
+
+          <section id="reviews" className={section}>
+            <h2 className={`${h2} mb-2`}>Guest reviews</h2>
+            {reviews.length ? (
+              <>
+                <p className="mb-6 flex items-center gap-2 text-[15px] text-muted">
+                  <span className="text-amber-400" aria-hidden>★</span>
+                  <strong className="font-medium text-ink">{avg.toFixed(1)}</strong> · {reviews.length} review{reviews.length > 1 ? "s" : ""}
+                </p>
+                <ul className="mb-8 grid gap-4 sm:grid-cols-2">
+                  {reviews.map((r, i) => (
+                    <li key={i} className="rounded-2xl border border-line p-5">
+                      <div role="img" aria-label={`${r.rating} out of 5 stars`} className="text-amber-400">{"★".repeat(r.rating)}<span className="text-line">{"★".repeat(5 - r.rating)}</span></div>
+                      <p className="mt-2 text-[15px] leading-relaxed text-muted">&ldquo;{r.text}&rdquo;</p>
+                      <p className="mt-3 text-sm"><strong className="font-medium">{r.name}</strong>{r.verified && <span className="ml-2 rounded-full bg-brand-tint px-2 py-0.5 text-xs font-medium text-brand">Verified stay</span>}</p>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+              <p className="mb-6 text-[15px] text-muted">No reviews for this home yet. Stayed here? Be the first to share your experience.</p>
+            )}
+            <ReviewForm homes={[{ slug: apt.slug, title: apt.title }]} fixedSlug={apt.slug} />
           </section>
 
           <section id="similar" className={section}>

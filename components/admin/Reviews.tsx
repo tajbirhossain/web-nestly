@@ -69,6 +69,12 @@ export default function Reviews() {
                 <div className="min-w-0">
                   <p className="font-medium">{r.name}</p>
                   <p className="truncate text-muted">{r.stay} · {timeAgo(r.createdAt)}</p>
+                  {r.email && (
+                    <p className="truncate text-xs text-muted">
+                      {r.email}
+                      {r.verifiedStay && <span className="ml-2 rounded-full bg-ok-tint px-2 py-0.5 font-medium text-ok">Verified stay</span>}
+                    </p>
+                  )}
                 </div>
                 <StatusBadge status={r.status} />
               </div>

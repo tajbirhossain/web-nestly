@@ -140,7 +140,7 @@ function PostEditor({ initial, onClose }: { initial: Draft; onClose: () => void 
           </Field>
         </div>
         <Field label="Excerpt" hint="Shown on blog cards and in search results.">
-          {(id) => <textarea id={id} className="a-input min-h-20" value={d.excerpt} onChange={(e) => setD({ ...d, excerpt: e.target.value })} />}
+          {(id) => <textarea id={id} className="a-input a-ta-sm" value={d.excerpt} onChange={(e) => setD({ ...d, excerpt: e.target.value })} />}
         </Field>
         <div>
           <span className="a-label">Cover image</span>
@@ -160,7 +160,7 @@ function PostEditor({ initial, onClose }: { initial: Draft; onClose: () => void 
           </div>
         </div>
         <Field label="Body" hint="Separate paragraphs with a blank line. Start a line with ## for a heading.">
-          {(id) => <textarea id={id} className="a-input min-h-64 font-mono text-[13px]" value={d.body} onChange={(e) => setD({ ...d, body: e.target.value })} />}
+          {(id) => <textarea id={id} className="a-input a-ta-lg font-mono text-[13px]" value={d.body} onChange={(e) => setD({ ...d, body: e.target.value })} />}
         </Field>
       </div>
     </Overlay>

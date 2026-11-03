@@ -81,6 +81,10 @@ export type Review = {
   text: string;
   status: ReviewStatus;
   createdAt: string;
+  /** Set for reviews written on the site: which home it is about, who wrote it (Google-verified), and if they had a confirmed stay. */
+  listingSlug?: string;
+  email?: string;
+  verifiedStay?: boolean;
 };
 
 export type PostStatus = "published" | "draft";
