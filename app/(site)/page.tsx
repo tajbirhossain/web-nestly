@@ -5,7 +5,10 @@ import ReviewsCarousel from "@/components/ReviewsCarousel";
 import SearchBar from "@/components/SearchBar";
 import { CtaBand, Heading, Section } from "@/components/sections";
 import { getApartments } from "@/lib/listings";
-import { features, hostSteps, lifestyles, logos, neighborhoods, posts, reviews, steps } from "@/lib/data";
+import { getReviews } from "@/lib/reviews";
+import { buildNeighborhoods } from "@/lib/catalog";
+import { features, hostSteps, lifestyles, logos, steps } from "@/lib/data";
+import { getPosts } from "@/lib/posts";
 
 const stories = [
   { title: "New city, zero stress with Nestly", by: "Guest, Marcus K.", image: "/images/stock/story1.jpg" },
@@ -14,7 +17,8 @@ const stories = [
 ];
 
 export default async function Home() {
-  const apartments = await getApartments();
+  const [apartments, reviews, posts] = await Promise.all([getApartments(), getReviews(), getPosts()]);
+  const neighborhoods = buildNeighborhoods(apartments);
   return (
     <>
       {/* Hero */}
@@ -245,7 +249,7 @@ export default async function Home() {
           <Link href="/blog" className="btn btn-outline mb-12">Read the blog</Link>
         </div>
         <div className="grid gap-6 md:grid-cols-3">
-          {posts.map((p) => (
+          {posts.slice(0, 3).map((p) => (
             <Link key={p.slug} href={`/blog/${p.slug}`} className="group">
               <div className="relative aspect-[4/3] overflow-hidden rounded-3xl">
                 <Image src={p.image} alt="" fill sizes="(min-width:768px) 33vw, 100vw" className="object-cover transition-transform duration-500 group-hover:scale-105" />

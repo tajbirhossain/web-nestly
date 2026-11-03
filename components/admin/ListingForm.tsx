@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
-import { NOW, slugify, uid } from "@/lib/admin/format";
+import { slugify, todayISO, uid } from "@/lib/admin/format";
 import { actions, useDB } from "@/lib/admin/store";
 import { uploadImage } from "@/lib/admin/upload";
 import type { Listing, ListingStatus } from "@/lib/admin/types";
 import { boroughs, cancellationInfo, featureFilters, type Borough, type Cancellation } from "@/lib/data";
 import { useFeedback } from "./feedback";
 import { Icon } from "./icons";
+import LocationPicker from "./LocationPicker";
 import { EmptyState, Field, PageHeader } from "./ui";
 
 // Listings can use uploaded photos (Vercel Blob) or the site's built-in image library.
@@ -30,14 +31,23 @@ type Form = {
   title: string; neighborhood: string; borough: Borough; beds: string; baths: string; sqft: string;
   price: string; availableFrom: string; status: ListingStatus; featured: boolean;
   images: string[]; description: string; amenities: string[];
+  address: string; lat: number | null; lng: number | null;
 };
 
-const blank: Form = {
+const AREA_CENTER: Record<Borough, [number, number]> = {
+  Manhattan: [40.7831, -73.9712],
+  Bronx: [40.8448, -73.8648],
+  Brooklyn: [40.6782, -73.9442],
+  "New Jersey": [40.7178, -74.0431],
+};
+
+const blankForm = (): Form => ({
   cleaningFee: "200", securityDeposit: "", maxGuests: "2", minGuestAge: "18", checkInTime: "3:00 PM", checkOutTime: "11:00 AM",
   cancellation: "moderate", specialInstructions: "", childrenAllowed: true, utilitiesIncluded: true, smokingAllowed: false, partiesAllowed: false,
   title: "", neighborhood: "", borough: "Manhattan", beds: "1", baths: "1", sqft: "", price: "",
-  availableFrom: NOW.slice(0, 10), status: "draft", featured: false, images: [], description: "", amenities: [],
-};
+  availableFrom: todayISO(), status: "draft", featured: false, images: [], description: "", amenities: [],
+  address: "", lat: null, lng: null,
+});
 
 const toForm = (l: Listing): Form => ({
   cleaningFee: String(l.cleaningFee), securityDeposit: String(l.securityDeposit), maxGuests: String(l.maxGuests), minGuestAge: String(l.minGuestAge),
@@ -46,6 +56,7 @@ const toForm = (l: Listing): Form => ({
   title: l.title, neighborhood: l.neighborhood, borough: l.borough, beds: String(l.beds), baths: String(l.baths),
   sqft: String(l.sqft), price: String(l.price), availableFrom: l.availableFrom, status: l.status,
   featured: l.featured, images: l.images, description: l.description, amenities: l.amenities,
+  address: l.address ?? "", lat: l.lat ?? null, lng: l.lng ?? null,
 });
 
 /** Route wrapper: resolves /admin/listings/[id] (or "new") to the right form. */
@@ -68,7 +79,7 @@ function ListingForm({ listing }: { listing?: Listing }) {
   const router = useRouter();
   const { toast } = useFeedback();
   const db = useDB();
-  const [f, setF] = useState<Form>(listing ? toForm(listing) : blank);
+  const [f, setF] = useState<Form>(() => (listing ? toForm(listing) : blankForm()));
   const [errors, setErrors] = useState<Partial<Record<keyof Form, string>>>({});
   const set = <K extends keyof Form>(k: K, v: Form[K]) => {
     setF((p) => ({ ...p, [k]: v }));
@@ -119,9 +130,9 @@ function ListingForm({ listing }: { listing?: Listing }) {
     let slug = listing?.slug ?? slugify(f.title);
     if (!listing && db.listings.some((l) => l.slug === slug)) slug = `${slug}-${uid("").slice(1, 5)}`;
     const next: Listing = {
-      address: listing?.address,
-      lat: listing?.lat,
-      lng: listing?.lng,
+      address: f.address.trim() || undefined,
+      lat: f.lat ?? undefined,
+      lng: f.lng ?? undefined,
       highlights: listing?.highlights,
       id: listing?.id ?? slug,
       slug,
@@ -199,6 +210,15 @@ function ListingForm({ listing }: { listing?: Listing }) {
                 </select>
               )}
             </Field>
+            <LocationPicker
+              address={f.address}
+              lat={f.lat}
+              lng={f.lng}
+              center={AREA_CENTER[f.borough]}
+              state={f.borough === "New Jersey" ? "NJ" : "NY"}
+              onAddress={(v) => set("address", v)}
+              onPoint={(la, ln) => setF((p) => ({ ...p, lat: la, lng: ln }))}
+            />
             <Field label="Description" className="sm:col-span-2" hint="Separate paragraphs with a blank line.">
               {(id) => <textarea id={id} className="a-input min-h-40" value={f.description} onChange={(e) => set("description", e.target.value)} />}
             </Field>

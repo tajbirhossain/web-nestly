@@ -54,3 +54,9 @@ The admin listing form uploads photos to Vercel Blob (resized in the browser to 
 3. On Vercel, also make sure `DATABASE_URL` is set for the project (the Neon integration can add it).
 
 Without the token, uploads show a clear error and the built-in image library still works.
+
+## Email (Resend)
+
+New booking, inquiry and host requests email the support address from Admin → Settings (per the notify toggles), guests get an acknowledgement, and confirming or declining a booking or host application emails that person.
+
+Set `RESEND_API_KEY` and `EMAIL_FROM` (a sender on a domain verified in Resend, e.g. `Nestly <bookings@yourdomain.com>`) in Vercel and `.env.local`. Without them nothing is sent; messages are only logged.

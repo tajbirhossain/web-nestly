@@ -17,6 +17,7 @@ export function DatesPicker({
   className,
   panelClass = "w-[720px]",
   name,
+  blocked,
 }: {
   start: string;
   end: string;
@@ -29,6 +30,8 @@ export function DatesPicker({
   panelClass?: string;
   /** Base name for hidden inputs, e.g. "stay" → stayStart / stayEnd. Defaults to movein / moveout. */
   name?: boolean;
+  /** Stays already taken (confirmed bookings); the calendar will not let guests pick them. */
+  blocked?: { start: string; end: string }[];
 }) {
   const value = start ? (end ? `${fmtShort(start)} – ${fmtShort(end)}` : `${fmtShort(start)} → check-out`) : "";
   return (
@@ -40,7 +43,7 @@ export function DatesPicker({
         </>
       )}
       <FieldPopover label={label} value={value} placeholder={placeholder} variant={variant} align={align} className={className} panelClass={panelClass}>
-        {(close) => <DateRangePanel start={start} end={end} onChange={onChange} onDone={close} />}
+        {(close) => <DateRangePanel start={start} end={end} onChange={onChange} onDone={close} blocked={blocked} />}
       </FieldPopover>
     </>
   );

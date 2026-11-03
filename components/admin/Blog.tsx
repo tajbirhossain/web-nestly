@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { matches } from "@/lib/admin/calc";
-import { fmtDate, slugify, uid, TODAY } from "@/lib/admin/format";
+import { fmtDate, slugify, todayISO, uid } from "@/lib/admin/format";
 import { actions, useDB } from "@/lib/admin/store";
 import type { Post, PostStatus } from "@/lib/admin/types";
 import { useFeedback } from "./feedback";
@@ -13,7 +13,7 @@ const categories = ["Guides", "Neighborhoods", "Corporate", "News"];
 const covers = ["/images/blog/blog1.jpg", "/images/blog/blog2.jpg", "/images/blog/blog3.jpg"];
 
 type Draft = Omit<Post, "id" | "slug"> & { id?: string; slug?: string };
-const empty: Draft = { title: "", excerpt: "", category: "Guides", body: "", image: covers[0], status: "draft", date: TODAY };
+const emptyDraft = (): Draft => ({ title: "", excerpt: "", category: "Guides", body: "", image: covers[0], status: "draft", date: todayISO() });
 
 export default function Blog() {
   const db = useDB();
@@ -42,7 +42,7 @@ export default function Blog() {
         title="Blog"
         description="Guides and stories that appear on the Nestly blog."
         actions={
-          <button type="button" className="a-btn a-btn-primary" onClick={() => setDraft(empty)}>
+          <button type="button" className="a-btn a-btn-primary" onClick={() => setDraft(emptyDraft())}>
             <Icon name="plus" size={16} /> New post
           </button>
         }
@@ -82,7 +82,7 @@ export default function Blog() {
             ))}
           </ul>
         ) : (
-          <EmptyState icon="doc" title="No posts yet" text="Write your first story." action={<button type="button" className="a-btn a-btn-primary" onClick={() => setDraft(empty)}>New post</button>} />
+          <EmptyState icon="doc" title="No posts yet" text="Write your first story." action={<button type="button" className="a-btn a-btn-primary" onClick={() => setDraft(emptyDraft())}>New post</button>} />
         )}
       </div>
 

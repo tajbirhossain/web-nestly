@@ -4,6 +4,9 @@
 export const NOW = "2026-11-02T15:00:00Z";
 export const TODAY = NOW.slice(0, 10);
 
+/** The real current date (YYYY-MM-DD). NOW above only anchors the sample data. */
+export const todayISO = () => new Date().toISOString().slice(0, 10);
+
 export const fmtDate = (iso: string) =>
   new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
 
@@ -19,7 +22,7 @@ export const slugify = (s: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
-export function timeAgo(iso: string, now = Date.parse(NOW)) {
+export function timeAgo(iso: string, now = Date.now()) {
   const mins = Math.max(0, Math.round((now - Date.parse(iso)) / 60_000));
   if (mins < 60) return `${Math.max(1, mins)}m ago`;
   const hrs = Math.round(mins / 60);

@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { bookingValue, byId, nightsOf } from "@/lib/admin/calc";
-import { TODAY, daysBetween, fmtShort, timeAgo } from "@/lib/admin/format";
+import { daysBetween, fmtShort, timeAgo, todayISO } from "@/lib/admin/format";
 import { useDB } from "@/lib/admin/store";
 import { money as fmtMoney } from "@/lib/data";
 import { Icon, type IconName } from "./icons";
@@ -23,22 +23,23 @@ export default function Dashboard() {
   const confirmedValue = confirmed.reduce((s, b) => s + bookingValue(b, listings.get(b.listingId)), 0);
   const live = db.listings.filter((l) => l.status === "published").length;
 
+  const [today] = useState(todayISO);
   const weeks = useMemo(() => {
     const bins = Array.from({ length: 8 }, (_, i) => ({ start: 7 * (7 - i), count: 0 }));
     for (const b of db.bookings) {
-      const age = daysBetween(b.createdAt.slice(0, 10), TODAY);
+      const age = daysBetween(b.createdAt.slice(0, 10), today);
       const bin = bins.find((x) => age >= x.start - 6 && age <= x.start);
       if (bin) bin.count++;
     }
     return bins.map((x) => ({
-      label: fmtShort(new Date(Date.parse(TODAY) - x.start * 86_400_000).toISOString()),
+      label: fmtShort(new Date(Date.parse(today) - x.start * 86_400_000).toISOString()),
       count: x.count,
     }));
-  }, [db.bookings]);
+  }, [db.bookings, today]);
   const maxWeek = Math.max(1, ...weeks.map((w) => w.count));
 
   const moveIns = confirmed
-    .filter((b) => daysBetween(TODAY, b.checkIn) >= 0 && daysBetween(TODAY, b.checkIn) <= 30)
+    .filter((b) => daysBetween(today, b.checkIn) >= 0 && daysBetween(today, b.checkIn) <= 30)
     .sort((a, b) => a.checkIn.localeCompare(b.checkIn));
 
   const attention: { label: string; count: number; href: string; icon: IconName }[] = [

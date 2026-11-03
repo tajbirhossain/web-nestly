@@ -4,16 +4,18 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { CtaBand } from "@/components/sections";
-import { posts } from "@/lib/data";
+import { posts as sampleHere } from "@/lib/data";
+import { getPost } from "@/lib/posts";
 
 export function generateStaticParams() {
-  return posts.map((p) => ({ slug: p.slug }));
+  // Pre-render the sample posts; anything published in the admin renders on first request.
+  return sampleHere.map((p) => ({ slug: p.slug }));
 }
 
 export async function generateMetadata({ params }: PageProps<"/blog/[slug]">): Promise<Metadata> {
   const { slug } = await params;
-  const post = posts.find((p) => p.slug === slug);
-  return post ? { title: post.title, description: post.excerpt } : {};
+  const post = await getPost(slug);
+  return post ? { title: post.title, description: post.excerpt, openGraph: { images: [post.image] } } : {};
 }
 
 // Reading `params` must happen inside <Suspense> so the shared App Shell isn't tied to one URL.
@@ -42,7 +44,7 @@ function PostSkeleton() {
 
 async function Post({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const post = posts.find((p) => p.slug === slug);
+  const post = await getPost(slug);
   if (!post) notFound();
 
   return (

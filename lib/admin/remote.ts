@@ -37,6 +37,16 @@ export const saveSettingsRow = (s: Settings) => saveRows("settings", [{ ...s, id
 
 export const deleteRow = (table: Table, id: string) => call({ body: { op: "delete", table, id } });
 
+/** Tells the server to email the guest or host after a status change (it re-checks the saved status itself). */
+export async function notifyStatus(table: Table, id: string, changes: { status?: string }) {
+  if (!changes.status || (table !== "bookings" && table !== "hosts")) return;
+  await fetch("/api/admin/notify", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ kind: table === "bookings" ? "booking" : "host", id, status: changes.status }),
+  }).catch(() => {});
+}
+
 export const clearAll = () => call({ body: { op: "clear" } });
 
 export async function writeAll(db: DB) {

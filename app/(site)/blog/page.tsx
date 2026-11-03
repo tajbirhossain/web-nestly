@@ -2,14 +2,15 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { PageHero, Section } from "@/components/sections";
-import { posts } from "@/lib/data";
+import { getPosts } from "@/lib/posts";
 
 export const metadata: Metadata = {
   title: "Blog",
   description: "Guides for living, working and relocating in New York City.",
 };
 
-export default function BlogPage() {
+export default async function BlogPage() {
+  const posts = await getPosts();
   return (
     <>
       <PageHero kicker="The Nestly blog" title="Guides for living in New York" image="/images/stock/nyc-neighborhood.jpg" />

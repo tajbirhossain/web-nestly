@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import NewsletterForm from "@/components/NewsletterForm";
+import { getSettings } from "@/lib/settings";
 
 const cols = [
   {
@@ -38,7 +39,8 @@ const cols = [
   },
 ];
 
-export default function Footer() {
+export default async function Footer() {
+  const { supportEmail, phone } = await getSettings();
   return (
     <footer className="bg-ink text-white">
       <div className="container-n grid gap-12 py-16 md:grid-cols-[1.3fr_repeat(4,1fr)]">
@@ -47,9 +49,14 @@ export default function Footer() {
           <p className="mt-5 max-w-xs text-[15px] leading-relaxed text-white/70">
             Furnished, move-in ready apartments across New York City for stays of 30 days or longer.
           </p>
-          <a href="mailto:hello@nestly.nyc" className="mt-5 inline-block text-[15px] underline underline-offset-4 hover:text-white/80">
-            hello@nestly.nyc
+          <a href={`mailto:${supportEmail}`} className="mt-5 inline-block text-[15px] underline underline-offset-4 hover:text-white/80">
+            {supportEmail}
           </a>
+          {phone && (
+            <a href={`tel:${phone.replace(/[^+d]/g, "")}`} className="mt-2 block text-[15px] text-white/80 hover:text-white">
+              {phone}
+            </a>
+          )}
         </div>
         {cols.map((c) => (
           <nav key={c.title} aria-label={c.title}>

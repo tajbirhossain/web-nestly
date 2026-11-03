@@ -3,7 +3,8 @@
 import Modal from "@/components/ui/Modal";
 import { AmenityIcon } from "@/components/ui/icons";
 import PriceRange from "@/components/ui/PriceRange";
-import { PRICE_MAX, PRICE_MIN, PRICE_STEP, featureFilters, listingPrices } from "@/lib/data";
+import { useSearchMeta } from "@/components/BookingRules";
+import { featureFilters } from "@/lib/data";
 
 export type FilterState = {
   beds: string;
@@ -12,7 +13,8 @@ export type FilterState = {
   features: string[];
 };
 
-export const emptyFilters: FilterState = { beds: "", baths: "", price: [PRICE_MIN, PRICE_MAX], features: [] };
+/** Filters with nothing applied; the price range spans the current listings. */
+export const emptyFilters = (price: [number, number]): FilterState => ({ beds: "", baths: "", price, features: [] });
 
 const chip = (active: boolean) =>
   `inline-flex min-h-10 items-center gap-2 rounded-full border px-4 text-sm transition ${
@@ -41,6 +43,7 @@ export default function FiltersModal({
   onChange: (v: FilterState) => void;
   count: number;
 }) {
+  const { price: priceMeta } = useSearchMeta();
   const set = <K extends keyof FilterState>(k: K, v: FilterState[K]) => onChange({ ...value, [k]: v });
   const single = (k: "beds" | "baths", opts: [string, string][]) =>
     opts.map(([v, label]) => (
@@ -56,7 +59,7 @@ export default function FiltersModal({
       title="Filters"
       footer={
         <>
-          <button type="button" onClick={() => onChange(emptyFilters)} className="text-sm font-medium underline underline-offset-4 hover:text-brand">
+          <button type="button" onClick={() => onChange(emptyFilters([priceMeta.min, priceMeta.max]))} className="text-sm font-medium underline underline-offset-4 hover:text-brand">
             Clear all
           </button>
           <button type="button" onClick={onClose} className="btn btn-primary !min-h-11">
@@ -68,7 +71,7 @@ export default function FiltersModal({
       <section className="border-b border-line pb-6">
         <h3 className="font-serif text-lg">Price range</h3>
         <p className="mb-2 mt-1 text-sm text-muted">Monthly rent. Longer stays are priced per month.</p>
-        <PriceRange min={PRICE_MIN} max={PRICE_MAX} step={PRICE_STEP} prices={listingPrices} value={value.price} onChange={(v) => set("price", v)} />
+        <PriceRange min={priceMeta.min} max={priceMeta.max} step={priceMeta.step} prices={priceMeta.prices} value={value.price} onChange={(v) => set("price", v)} />
       </section>
       <Group title="Bedrooms">
         {single("beds", [["", "Any"], ["0", "Studio"], ["1", "1"], ["2", "2"], ["3", "3+"]])}

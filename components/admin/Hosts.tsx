@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { timeAgo } from "@/lib/admin/format";
+import { slugify, timeAgo, todayISO } from "@/lib/admin/format";
 import { actions, useDB } from "@/lib/admin/store";
-import type { HostApplication, HostStatus } from "@/lib/admin/types";
-import { bedLabel, money } from "@/lib/data";
+import type { HostApplication, HostStatus, Listing } from "@/lib/admin/types";
+import { bedLabel, defaultTerms, money } from "@/lib/data";
 import { useFeedback } from "./feedback";
 import { Icon } from "./icons";
 import { EmptyState, PageHeader, Segmented, StatusBadge } from "./ui";
@@ -27,7 +27,34 @@ export default function Hosts() {
       danger: true,
     }))) return;
     actions.patch("hosts", h.id, { status: next });
-    toast(next === "approved" ? `${h.name} approved` : `${h.name} rejected`);
+    if (next !== "approved") return toast(`${h.name} rejected`);
+    // Approving starts the listing: a draft pre-filled from the application, ready for photos and review.
+    const id = `lst_${h.id}`;
+    if (db.listings.some((l) => l.id === id)) return toast(`${h.name} approved`);
+    const title = `${bedLabel(h.beds)} in ${h.address || h.borough}`;
+    const draft: Listing = {
+      id,
+      title,
+      slug: `${slugify(title)}-${h.id.slice(-4)}`,
+      neighborhood: "",
+      borough: h.borough,
+      beds: h.beds,
+      baths: 1,
+      sqft: 0,
+      price: h.expectedRent,
+      availableFrom: todayISO(),
+      status: "draft",
+      featured: false,
+      childrenAllowed: true,
+      ...defaultTerms({ beds: h.beds, price: h.expectedRent }),
+      address: h.address || undefined,
+      images: [],
+      description: h.message,
+      amenities: [],
+      updatedAt: new Date().toISOString(),
+    };
+    actions.upsert("listings", draft);
+    toast(`${h.name} approved. A draft listing was created: add photos and publish it.`);
   }
 
   return (

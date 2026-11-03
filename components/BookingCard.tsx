@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRef, useState } from "react";
+import { useMinNights } from "@/components/BookingRules";
 import InquiryForm from "@/components/InquiryForm";
 import Modal from "@/components/ui/Modal";
 import { DatesPicker, GuestsPicker, guestLabel, guestTotal, noGuests } from "@/components/ui/Pickers";
@@ -15,6 +16,8 @@ export default function BookingCard({
   availableFrom,
   childrenAllowed = true,
   terms,
+  blocked = [],
+  bookingsOpen = true,
 }: {
   slug: string;
   title: string;
@@ -22,7 +25,12 @@ export default function BookingCard({
   availableFrom: string;
   childrenAllowed?: boolean;
   terms: Pick<Terms, "cleaningFee" | "securityDeposit" | "maxGuests" | "minGuestAge">;
+  /** Confirmed stays on this home; their dates cannot be picked. */
+  blocked?: { start: string; end: string }[];
+  /** False when the admin has paused new booking requests. */
+  bookingsOpen?: boolean;
 }) {
+  const minNights = useMinNights();
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [picked, setGuests] = useState(noGuests);
@@ -51,13 +59,13 @@ export default function BookingCard({
         </p>
 
         <div ref={picker} className="mt-4 space-y-2.5">
-          <DatesPicker start={start} end={end} onChange={(s, e) => { setStart(s); setEnd(e); }} variant="field" placeholder="Select dates" align="right" panelClass="w-[720px]" />
+          <DatesPicker start={start} end={end} blocked={blocked} onChange={(s, e) => { setStart(s); setEnd(e); }} variant="field" placeholder="Select dates" align="right" panelClass="w-[720px]" />
           <GuestsPicker value={guests} onChange={setGuests} variant="field" placeholder="Guests" align="right" childPolicy={childrenAllowed ? "allow" : "blocked"} max={terms.maxGuests} />
           {!childrenAllowed && <p className="px-1 text-xs text-muted">Adults only — this home doesn&apos;t allow children.</p>}
           <p className="px-1 text-xs text-muted">Sleeps up to {terms.maxGuests} · primary guest {terms.minGuestAge}+</p>
         </div>
 
-        {nights >= 30 ? (
+        {nights >= minNights ? (
           <dl className="mt-4 space-y-2 border-t border-line pt-4 text-sm">
             <div className="flex justify-between"><dt className="text-muted">{fmtShort(start)} – {fmtShort(end)}</dt><dd>{nights} nights</dd></div>
             <div className="flex justify-between"><dt className="text-muted">{money(price)} × {fullMonths} month{fullMonths > 1 ? "s" : ""}</dt><dd>{money(price * fullMonths)}</dd></div>
@@ -75,11 +83,17 @@ export default function BookingCard({
 
         <button
           type="button"
-          onClick={() => (nights >= 30 ? setOpen(true) : picker.current?.querySelector("button")?.click())}
-          className="btn btn-primary mt-4 w-full"
+          disabled={!bookingsOpen}
+          onClick={() => (nights >= minNights ? setOpen(true) : picker.current?.querySelector("button")?.click())}
+          className="btn btn-primary mt-4 w-full disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {nights >= 30 ? "Request to book" : "Add dates to see prices"}
+          {!bookingsOpen ? "Booking requests paused" : nights >= minNights ? "Request to book" : "Add dates to see prices"}
         </button>
+        {!bookingsOpen && (
+          <p role="status" className="mt-3 rounded-xl bg-soft px-3 py-2 text-center text-xs text-muted">
+            We&apos;re not taking new booking requests right now. <Link href="/contact" className="font-medium text-brand underline underline-offset-4">Contact us</Link> and we&apos;ll help.
+          </p>
+        )}
         <p className="mt-3 rounded-xl bg-brand-tint px-3 py-2 text-center text-xs font-medium text-brand">Book direct &amp; save up to 20% — no third-party platform fees.</p>
         <p className="mt-2 text-center text-xs text-muted">Request to book — we confirm availability personally.</p>
       </div>

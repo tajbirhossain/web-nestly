@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import InquiryForm from "@/components/InquiryForm";
 import { PageHero, Section } from "@/components/sections";
+import { getSettings } from "@/lib/settings";
 
 export const metadata: Metadata = {
   title: "Contact",
@@ -15,7 +16,8 @@ const links = [
   ["FAQ", "Quick answers", "/faq"],
 ];
 
-export default function ContactPage() {
+export default async function ContactPage() {
+  const { supportEmail, phone } = await getSettings();
   return (
     <>
       <PageHero
@@ -43,7 +45,13 @@ export default function ContactPage() {
           <aside className="space-y-4">
             <div className="rounded-3xl bg-ink p-7 text-white">
               <p className="text-sm text-white/60">Email</p>
-              <a href="mailto:hello@nestly.nyc" className="text-xl underline underline-offset-4">hello@nestly.nyc</a>
+              <a href={`mailto:${supportEmail}`} className="text-xl underline underline-offset-4">{supportEmail}</a>
+              {phone && (
+                <>
+                  <p className="mt-6 text-sm text-white/60">Phone</p>
+                  <a href={`tel:${phone.replace(/[^+d]/g, "")}`} className="text-xl underline underline-offset-4">{phone}</a>
+                </>
+              )}
               <p className="mt-6 text-sm text-white/60">Based in</p>
               <p>New York, NY</p>
             </div>

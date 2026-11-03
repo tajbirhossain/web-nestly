@@ -5,7 +5,11 @@ import { TABLES, dbEnabled, isTable, sql } from "@/lib/db";
 // Demo-only data endpoint for the admin panel: no auth, so don't expose this publicly.
 // Table names are checked against an allow-list before being put into SQL text.
 
-const refreshSite = () => revalidateTag("listings", { expire: 0 });
+// Public pages cache these tables; drop the cache entry so admin edits show up immediately.
+const PUBLIC_TABLES = ["listings", "reviews", "settings", "bookings", "posts"];
+const refreshSite = (table: string) => {
+  if (PUBLIC_TABLES.includes(table)) revalidateTag(table, { expire: 0 });
+};
 
 export async function GET() {
   if (!dbEnabled) return NextResponse.json({ enabled: false });
@@ -51,14 +55,14 @@ export async function POST(req: Request) {
           [JSON.stringify(payload)],
         );
       }
-      if (body.table === "listings") refreshSite();
+      refreshSite(body.table);
     } else if (body.op === "delete") {
       if (!isTable(body.table) || typeof body.id !== "string") return NextResponse.json({ error: "Bad request" }, { status: 400 });
       await sql.query(`delete from ${body.table} where id = $1`, [body.id]);
-      if (body.table === "listings") refreshSite();
+      refreshSite(body.table);
     } else if (body.op === "clear") {
       await Promise.all(TABLES.map((t) => sql.query(`delete from ${t}`)));
-      refreshSite();
+      PUBLIC_TABLES.forEach(refreshSite);
     } else {
       return NextResponse.json({ error: "Unknown operation" }, { status: 400 });
     }

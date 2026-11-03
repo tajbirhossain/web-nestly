@@ -1,5 +1,6 @@
 import type { Booking, HostApplication, Inquiry, InquiryType } from "@/lib/admin/types";
 import { dbEnabled, sql, type Table } from "@/lib/db";
+import { boroughs, type Borough } from "@/lib/data";
 
 // Stores public-form submissions in the same tables the admin reads.
 type Body = Record<string, string>;
@@ -53,7 +54,7 @@ export async function saveSubmission(type: string, body: Body, name: string): Pr
       email,
       phone,
       address: body.address ?? "",
-      borough: "Manhattan",
+      borough: boroughs.includes(body.borough as Borough) ? (body.borough as Borough) : "Manhattan",
       beds: bedsFrom(body.beds),
       expectedRent: Number((body.rent ?? "").replace(/[^\d]/g, "")) || 0,
       message: body.message ?? "",

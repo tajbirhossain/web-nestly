@@ -1,6 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { allowsChildren, termsOf } from "@/lib/data";
+import { fetchBookedRanges, overlaps } from "@/lib/availability";
 import { getApartment } from "@/lib/listings";
+import { notifySubmission } from "@/lib/notifications";
+import { fetchSettings } from "@/lib/settings";
 import { saveSubmission } from "@/lib/submissions";
 
 const allowed = new Set(["contact", "booking", "host", "corporate", "relocation", "newsletter"]);
@@ -27,6 +30,23 @@ export async function POST(req: Request) {
     if (![adults, children].every((n) => Number.isInteger(n) && n >= 0 && n <= 10)) {
       return NextResponse.json({ error: "Invalid guest count" }, { status: 422 });
     }
+    // Booking rules come from the admin settings and confirmed bookings, checked fresh on every request.
+    const settings = await fetchSettings();
+    if (!settings.bookingsOpen) {
+      return NextResponse.json({ error: "We're not taking new booking requests right now. Please contact us and we'll help." }, { status: 403 });
+    }
+    const { movein, moveout } = body;
+    const iso = /^\d{4}-\d{2}-\d{2}$/;
+    if (!iso.test(movein ?? "") || !iso.test(moveout ?? "") || moveout <= movein) {
+      return NextResponse.json({ error: "Please choose valid check-in and check-out dates" }, { status: 422 });
+    }
+    const nights = Math.round((Date.parse(moveout) - Date.parse(movein)) / 86_400_000);
+    if (nights < settings.minStayDays) {
+      return NextResponse.json({ error: `The minimum stay is ${settings.minStayDays} nights` }, { status: 422 });
+    }
+    if (body.apartment && overlaps(await fetchBookedRanges(body.apartment), movein, moveout)) {
+      return NextResponse.json({ error: "Those dates were just booked. Please choose different dates." }, { status: 409 });
+    }
     const apt = body.apartment ? await getApartment(body.apartment) : undefined;
     if (children > 0 && apt && !allowsChildren(apt)) {
       return NextResponse.json({ error: "This home does not allow children" }, { status: 422 });
@@ -39,6 +59,8 @@ export async function POST(req: Request) {
   try {
     const stored = await saveSubmission(type, body, name);
     if (!stored) console.log("[inquiry] no database configured, not stored:", type, { name, email });
+    // Email after the response is sent so the guest never waits on the mail provider.
+    after(async () => notifySubmission(type, body, name, await fetchSettings()));
   } catch (e) {
     console.error("[inquiry] could not store submission:", e);
     return NextResponse.json({ error: "We couldn't save your request. Please try again." }, { status: 500 });

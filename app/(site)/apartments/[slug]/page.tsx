@@ -12,8 +12,11 @@ import ListingActions from "@/components/ListingActions";
 import MapView from "@/components/MapView";
 import SectionNav from "@/components/SectionNav";
 import { SqftIcon } from "@/components/ui/icons";
-import { allowsChildren, apartments as sampleHomes, cancellationInfo, termsOf, money, bedLabel, bedroomRows, features, neighborhoods } from "@/lib/data";
+import { allowsChildren, apartments as sampleHomes, cancellationInfo, termsOf, money, bedLabel, bedroomRows, features } from "@/lib/data";
+import { buildNeighborhoods } from "@/lib/catalog";
+import { getBookedRanges } from "@/lib/availability";
 import { getApartment, getApartments } from "@/lib/listings";
+import { getSettings } from "@/lib/settings";
 
 // Pre-render the sample homes; anything added in the admin renders on first request.
 export function generateStaticParams() {
@@ -23,7 +26,9 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: PageProps<"/apartments/[slug]">): Promise<Metadata> {
   const { slug } = await params;
   const apt = await getApartment(slug);
-  return apt ? { title: apt.title, description: apt.about[0] } : {};
+  return apt
+    ? { title: apt.title, description: apt.about[0], openGraph: { title: apt.title, description: apt.about[0], images: apt.images.slice(0, 1) } }
+    : {};
 }
 
 const nav = [
@@ -63,15 +68,16 @@ async function Apartment({ params }: { params: Promise<{ slug: string }> }) {
   const apt = await getApartment(slug);
   if (!apt) notFound();
 
+  const [blocked, { bookingsOpen }] = await Promise.all([getBookedRanges(apt.slug), getSettings()]);
   const similar = (await getApartments()).filter((a) => a.slug !== apt.slug).slice(0, 3);
   const terms = termsOf(apt);
-  const hood = neighborhoods.find((n) => n.name === apt.neighborhood);
+  const hood = buildNeighborhoods(await getApartments()).find((n) => n.name === apt.neighborhood);
 
   return (
     <div className="pt-[72px]">
       <div id="photos" className="container-n pb-8 pt-8">
         <Link href={`/apartments?area=${encodeURIComponent(apt.borough)}`} className="text-sm text-muted underline underline-offset-4 hover:text-ink">
-          {apt.neighborhood}, New York
+          {apt.neighborhood}, {apt.borough}
         </Link>
         <h1 className="mt-2 text-[clamp(28px,4vw,40px)] leading-[1.1]">{apt.title}</h1>
         <div className="mb-5 mt-3 flex flex-wrap items-center justify-between gap-3">
@@ -201,7 +207,7 @@ async function Apartment({ params }: { params: Promise<{ slug: string }> }) {
         </div>
 
         <aside className="pt-8 lg:sticky lg:top-40 lg:self-start">
-          <BookingCard slug={apt.slug} title={apt.title} price={apt.price} availableFrom={apt.availableFrom} childrenAllowed={allowsChildren(apt)} terms={terms} />
+          <BookingCard slug={apt.slug} title={apt.title} price={apt.price} availableFrom={apt.availableFrom} childrenAllowed={allowsChildren(apt)} terms={terms} blocked={blocked} bookingsOpen={bookingsOpen} />
         </aside>
       </div>
     </div>

@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { defaultTerms } from "@/lib/data";
-import { clearAll, deleteRow, loadRemote, saveRows, saveSettingsRow, writeAll } from "./remote";
+import { clearAll, deleteRow, loadRemote, notifyStatus, saveRows, saveSettingsRow, writeAll } from "./remote";
 import { seedDB } from "./seed";
 import type { CollectionKey, DB, Settings } from "./types";
 
@@ -145,7 +145,7 @@ export const actions = {
     const merged = list.map((x) => (x.id === id ? { ...x, ...changes } : x));
     commit({ ...db, [key]: merged });
     const row = merged.find((x) => x.id === id);
-    if (row) persist(() => saveRows(key, [row]));
+    if (row) persist(() => saveRows(key, [row]).then(() => notifyStatus(key, id, changes as { status?: string })));
   },
   remove(key: CollectionKey, id: string) {
     load();

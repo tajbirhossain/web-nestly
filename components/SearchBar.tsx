@@ -4,10 +4,11 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Select from "@/components/ui/Select";
 import { DatesPicker, GuestsPicker, guestTotal, noGuests } from "@/components/ui/Pickers";
-import { areaOptions } from "@/lib/data";
+import { useSearchMeta } from "@/components/BookingRules";
 
 export default function SearchBar() {
   const router = useRouter();
+  const { areaOptions } = useSearchMeta();
   const [area, setArea] = useState("");
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");

@@ -29,7 +29,7 @@ export default function CardGallery({
   }
 
   const arrow =
-    "relative z-20 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-lg text-ink opacity-0 shadow transition hover:bg-white focus-visible:opacity-100 group-hover:opacity-100 disabled:hidden";
+    "relative z-20 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-lg text-ink opacity-0 shadow transition hover:bg-white focus-visible:opacity-100 group-hover:opacity-100 disabled:invisible";
 
   return (
     <>
@@ -54,15 +54,18 @@ export default function CardGallery({
       </div>
       {images.length > 1 && (
         <>
+          {/* Dots sit in their own centred layer so hiding an arrow never shifts them. */}
+          <span className="pointer-events-none absolute inset-x-0 bottom-[25px] z-20 flex justify-center" aria-hidden>
+            {images.slice(0, 6).map((_, n) => (
+              <span key={n} className="flex w-4 justify-center">
+                <span className={`h-1.5 rounded-full bg-white transition-all ${n === i ? "w-4" : "w-1.5 opacity-70"}`} />
+              </span>
+            ))}
+          </span>
           <div className="pointer-events-none absolute inset-x-0 bottom-3 z-20 flex items-center justify-between px-3">
             <button type="button" aria-label="Previous photo" disabled={i === 0} onClick={() => go(i - 1)} className={`${arrow} pointer-events-auto`}>
               ‹
             </button>
-            <span className="pointer-events-none flex gap-1.5" aria-hidden>
-              {images.slice(0, 6).map((_, n) => (
-                <span key={n} className={`h-1.5 rounded-full bg-white transition-all ${n === i ? "w-4" : "w-1.5 opacity-70"}`} />
-              ))}
-            </span>
             <button type="button" aria-label="Next photo" disabled={i === images.length - 1} onClick={() => go(i + 1)} className={`${arrow} pointer-events-auto`}>
               ›
             </button>

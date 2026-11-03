@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { CtaBand, Heading, PageHero, Section } from "@/components/sections";
-import { boroughs, money, neighborhoods } from "@/lib/data";
+import { buildNeighborhoods } from "@/lib/catalog";
+import { boroughs, money } from "@/lib/data";
 import { getApartments } from "@/lib/listings";
 
 export const metadata: Metadata = {
@@ -12,6 +13,7 @@ export const metadata: Metadata = {
 
 export default async function NeighborhoodsPage() {
   const apartments = await getApartments();
+  const neighborhoods = buildNeighborhoods(apartments);
   return (
     <>
       <PageHero

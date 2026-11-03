@@ -1,18 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { MIN_NIGHTS, addDays, fromISO, nightsBetween, toISO } from "@/components/ui/dates";
+import { useMinNights } from "@/components/BookingRules";
+import { addDays, fromISO, nightsBetween, toISO } from "@/components/ui/dates";
 
 type Props = {
   start: string;
   end: string;
   onChange: (start: string, end: string) => void;
   onDone: () => void;
+  /** Stays that are already taken; those days cannot be picked. Check-out on a booked check-in day is fine. */
+  blocked?: { start: string; end: string }[];
 };
 
 const DOW = ["S", "M", "T", "W", "T", "F", "S"];
 const durations = [
-  { label: "30 nights", days: 30 },
   { label: "2 months", days: 61 },
   { label: "3 months", days: 91 },
   { label: "6 months", days: 182 },
@@ -24,7 +26,12 @@ function monthDays(first: Date) {
   return [...Array(lead).fill(null), ...Array.from({ length: count }, (_, i) => new Date(first.getFullYear(), first.getMonth(), i + 1))] as (Date | null)[];
 }
 
-export default function DateRangePanel({ start, end, onChange, onDone }: Props) {
+export default function DateRangePanel({ start, end, onChange, onDone, blocked = [] }: Props) {
+  const MIN_NIGHTS = useMinNights();
+  const quick = [{ label: `${MIN_NIGHTS} night${MIN_NIGHTS > 1 ? "s" : ""}`, days: MIN_NIGHTS }, ...durations.filter((d) => d.days > MIN_NIGHTS)];
+  // True when a stay from a to b would overlap a taken one (back-to-back is allowed).
+  const clash = (a: Date, b: Date) => blocked.some((r) => toISO(a) < r.end && toISO(b) > r.start);
+  const taken = (d: Date) => blocked.some((r) => toISO(d) >= r.start && toISO(d) < r.end);
   // Mounted only while the popover is open, so reading the clock here never runs during prerender.
   const [today] = useState(() => {
     const n = new Date();
@@ -69,7 +76,9 @@ export default function DateRangePanel({ start, end, onChange, onDone }: Props) 
             if (!d) return <span key={i} />;
             const past = d < today;
             const tooShort = !!(s && !e && d > s && minEnd && d < minEnd);
-            const disabled = past || tooShort;
+            const choosingEnd = !!s && !e && d > s;
+            const unavailable = choosingEnd ? clash(s!, d) : taken(d);
+            const disabled = past || tooShort || unavailable;
             const isStart = !!s && d.getTime() === s.getTime();
             const isEnd = !!rangeEnd && d.getTime() === rangeEnd.getTime();
             const inRange = !!s && !!rangeEnd && d > s && d < rangeEnd;
@@ -82,16 +91,16 @@ export default function DateRangePanel({ start, end, onChange, onDone }: Props) 
                   disabled={disabled}
                   onClick={() => pick(d)}
                   onMouseEnter={() => setHover(d)}
-                  aria-label={`${fmt(d)}${tooShort ? " — below the 30-night minimum" : ""}`}
+                  aria-label={`${fmt(d)}${tooShort ? ` — below the ${MIN_NIGHTS}-night minimum` : ""}${unavailable ? " — not available" : ""}`}
                   aria-pressed={isStart || isEnd}
-                  title={tooShort ? "Minimum stay is 30 nights" : undefined}
+                  title={unavailable ? "Already booked" : tooShort ? `Minimum stay is ${MIN_NIGHTS} nights` : undefined}
                   className={`h-10 w-10 rounded-full text-sm transition ${
                     isStart || (isEnd && e)
                       ? "bg-brand font-medium text-white"
                       : disabled
                         ? "cursor-not-allowed text-ink/25"
                         : "hover:bg-brand/15"
-                  } ${tooShort ? "line-through decoration-ink/20" : ""} ${isToday && !isStart ? "font-semibold ring-1 ring-ink/30" : ""}`}
+                  } ${tooShort || unavailable ? "line-through decoration-ink/20" : ""} ${isToday && !isStart ? "font-semibold ring-1 ring-ink/30" : ""}`}
                 >
                   {d.getDate()}
                 </button>
@@ -113,7 +122,7 @@ export default function DateRangePanel({ start, end, onChange, onDone }: Props) 
           ‹
         </button>
         <p className="text-sm text-muted">
-          {!s ? "Select your check-in date" : !e ? "Now select check-out (30 nights or more)" : `${fmt(s)} → ${fmt(e)}`}
+          {!s ? "Select your check-in date" : !e ? `Now select check-out (${MIN_NIGHTS} nights or more)` : `${fmt(s)} → ${fmt(e)}`}
         </p>
         <button type="button" aria-label="Next month" onClick={() => setView(new Date(view.getFullYear(), view.getMonth() + 1, 1))} className={navBtn}>
           ›
@@ -128,14 +137,16 @@ export default function DateRangePanel({ start, end, onChange, onDone }: Props) 
       {(
         <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-line pt-4">
           <span className="mr-1 text-xs font-semibold uppercase tracking-wider text-muted">Stay for</span>
-          {durations.map((d) => {
+          {quick.map((d) => {
             const target = s ? toISO(addDays(s, d.days)) : "";
+            const blockedStay = !!s && clash(s, addDays(s, d.days));
             const active = !!s && end === target;
             return (
               <button
                 key={d.label}
                 type="button"
-                disabled={!s}
+                disabled={!s || blockedStay}
+                title={blockedStay ? "Overlaps an existing booking" : undefined}
                 onClick={() => onChange(start, target)}
                 className={`rounded-full border px-3.5 py-1.5 text-sm transition disabled:cursor-not-allowed disabled:opacity-40 ${active ? "border-brand bg-brand text-white" : "border-line enabled:hover:border-ink"}`}
               >

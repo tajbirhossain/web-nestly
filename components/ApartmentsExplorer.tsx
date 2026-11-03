@@ -8,7 +8,8 @@ import MapView from "@/components/MapView";
 import Select from "@/components/ui/Select";
 import { DatesPicker, GuestsPicker, guestTotal, noGuests, type Guests } from "@/components/ui/Pickers";
 import { HeartIcon } from "@/components/ui/icons";
-import { PRICE_MAX, PRICE_MIN, allowsChildren, areaOptions, capacity, type Apartment } from "@/lib/data";
+import { useSearchMeta } from "@/components/BookingRules";
+import { allowsChildren, capacity, type Apartment } from "@/lib/data";
 import { useSaved } from "@/lib/saved";
 
 const sortOptions = [
@@ -20,6 +21,7 @@ const sortOptions = [
 
 export default function ApartmentsExplorer({ apartments, children }: { apartments: Apartment[]; children?: ReactNode }) {
   const sp = useSearchParams();
+  const { areaOptions, price: priceBounds } = useSearchMeta();
   const { saved } = useSaved();
   const [area, setArea] = useState(sp.get("area") ?? "");
   const [guests, setGuests] = useState<Guests>(() => {
@@ -31,7 +33,7 @@ export default function ApartmentsExplorer({ apartments, children }: { apartment
   const partySize = guestTotal(guests);
   const [start, setStart] = useState(sp.get("movein") ?? "");
   const [end, setEnd] = useState(sp.get("moveout") ?? "");
-  const [filters, setFilters] = useState<FilterState>({ ...emptyFilters, beds: sp.get("beds") ?? "" });
+  const [filters, setFilters] = useState<FilterState>({ ...emptyFilters([priceBounds.min, priceBounds.max]), beds: sp.get("beds") ?? "" });
   const [sort, setSort] = useState("featured");
   const [onlySaved, setOnlySaved] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -48,8 +50,8 @@ export default function ApartmentsExplorer({ apartments, children }: { apartment
         (!partySize || capacity(a) >= partySize) &&
         (!guests.children || allowsChildren(a)) &&
         // Slider ends are open-ended so admin-added homes outside the sample price range still show.
-        (price[0] <= PRICE_MIN || a.price >= price[0]) &&
-        (price[1] >= PRICE_MAX || a.price <= price[1]) &&
+        (price[0] <= priceBounds.min || a.price >= price[0]) &&
+        (price[1] >= priceBounds.max || a.price <= price[1]) &&
         features.every((f) => a.amenities.includes(f)) &&
         (!onlySaved || saved.includes(a.slug)),
     );
@@ -58,9 +60,9 @@ export default function ApartmentsExplorer({ apartments, children }: { apartment
     if (sort === "soon") list.sort((a, b) => a.availableFrom.localeCompare(b.availableFrom));
     if (sort === "featured") list.sort((a, b) => Number(!!b.featured) - Number(!!a.featured));
     return list;
-  }, [apartments, area, guests, partySize, filters, sort, onlySaved, saved]);
+  }, [apartments, priceBounds, area, guests, partySize, filters, sort, onlySaved, saved]);
 
-  const priceActive = filters.price[0] > PRICE_MIN || filters.price[1] < PRICE_MAX;
+  const priceActive = filters.price[0] > priceBounds.min || filters.price[1] < priceBounds.max;
   const filterCount = [filters.beds, filters.baths].filter(Boolean).length + filters.features.length + (priceActive ? 1 : 0);
   const dirty = area || partySize || start || filterCount || onlySaved;
   const pins = results.map((a) => ({ slug: a.slug, title: a.title, price: a.price, lat: a.lat, lng: a.lng }));
@@ -117,7 +119,7 @@ export default function ApartmentsExplorer({ apartments, children }: { apartment
                   setGuests(noGuests);
                   setStart("");
                   setEnd("");
-                  setFilters(emptyFilters);
+                  setFilters(emptyFilters([priceBounds.min, priceBounds.max]));
                   setOnlySaved(false);
                 }}
               >

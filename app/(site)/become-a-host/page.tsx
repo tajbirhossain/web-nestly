@@ -4,7 +4,7 @@ import Link from "next/link";
 import Faq from "@/components/Faq";
 import InquiryForm from "@/components/InquiryForm";
 import { FeatureCards, Heading, Section, SplitHero } from "@/components/sections";
-import { hostSteps } from "@/lib/data";
+import { boroughs, hostSteps } from "@/lib/data";
 
 export const metadata: Metadata = {
   title: "Become a host",
@@ -76,7 +76,8 @@ export default function HostPage() {
                 { name: "name", label: "Full name", required: true, half: true },
                 { name: "email", label: "Email", type: "email", required: true, half: true },
                 { name: "phone", label: "Phone", type: "tel", half: true },
-                { name: "address", label: "Neighborhood / building", half: true },
+                { name: "address", label: "Address or building", half: true },
+                { name: "borough", label: "Area", options: [...boroughs], half: true },
                 { name: "beds", label: "Bedrooms", options: ["Studio", "1", "2", "3+"], half: true },
                 { name: "rent", label: "Expected monthly rent", half: true },
                 { name: "message", label: "Tell us about your space", textarea: true },
