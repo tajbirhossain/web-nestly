@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { defaultTerms } from "@/lib/data";
-import { clearAll, deleteRow, loadRemote, notifyStatus, saveRows, saveSettingsRow, writeAll } from "./remote";
+import { AuthError, clearAll, deleteRow, loadRemote, notifyStatus, saveRows, saveSettingsRow, writeAll } from "./remote";
 import { seedDB } from "./seed";
 import type { CollectionKey, DB, Settings } from "./types";
 
@@ -44,7 +44,11 @@ function loadLocal() {
   }
 }
 
+/** Bumped on every sign-in so a request that started before it can't sign the new session out. */
+let authGen = 0;
+
 async function hydrate(first: boolean) {
+  const gen = authGen;
   try {
     const res = await loadRemote();
     if (!res.enabled) {
@@ -60,6 +64,13 @@ async function hydrate(first: boolean) {
     }
     setStatus({ remote: true, ready: true, error: null });
   } catch (e) {
+    if (e instanceof AuthError) {
+      if (gen !== authGen) return; // a newer sign-in already started its own load
+      // No valid server session: drop the stale browser flag so the panel sends us to sign in.
+      clearLocalSession();
+      setStatus({ ready: false, error: null });
+      return;
+    }
     setStatus({ ready: true, error: e instanceof Error ? e.message : "Could not reach the database" });
   }
 }
@@ -93,7 +104,10 @@ function persist(job: () => Promise<unknown>) {
   if (!status.remote) return;
   job()
     .then(() => status.error && setStatus({ error: null }))
-    .catch((e) => setStatus({ error: e instanceof Error ? e.message : "Could not save to the database" }));
+    .catch((e) => {
+      if (e instanceof AuthError) clearLocalSession();
+      setStatus({ error: e instanceof Error ? e.message : "Could not save to the database" });
+    });
 }
 
 function subscribe(cb: () => void) {
@@ -166,28 +180,49 @@ export const actions = {
   },
 };
 
-// ---- demo auth (no backend yet): a flag in localStorage -------------------
+// ---- auth ------------------------------------------------------------------
+// The server checks the password and sets an HttpOnly session cookie that every
+// /api/admin route requires (lib/adminAuth.ts). The localStorage flag below only
+// remembers "signed in" for the UI; it is cleared whenever the server says otherwise.
+/** Demo login, accepted by the server only in local development without ADMIN_PASSWORD. */
 export const DEMO_LOGIN = { email: "admin@nestly.nyc", password: "nestly-admin" };
 const authListeners = new Set<() => void>();
 
-export function signIn(email: string, password: string) {
-  if (email.trim().toLowerCase() !== DEMO_LOGIN.email || password !== DEMO_LOGIN.password) return false;
+function setLocalSession(on: boolean) {
   try {
-    window.localStorage.setItem(AUTH_KEY, "1");
+    if (on) window.localStorage.setItem(AUTH_KEY, "1");
+    else window.localStorage.removeItem(AUTH_KEY);
   } catch {
     /* ignore */
   }
   authListeners.forEach((l) => l());
-  return true;
+}
+const clearLocalSession = () => setLocalSession(false);
+
+/** Resolves to an error message, or null when signed in. */
+export async function signIn(email: string, password: string): Promise<string | null> {
+  try {
+    const res = await fetch("/api/admin/session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    if (!res.ok) return ((await res.json().catch(() => ({}))) as { error?: string }).error ?? "Sign in failed";
+  } catch {
+    return "Couldn't reach the server. Please try again.";
+  }
+  authGen++;
+  setLocalSession(true);
+  // Load real data now that the server will accept our requests.
+  setStatus({ ready: false, error: null });
+  if (loaded) void hydrate(true);
+  else load();
+  return null;
 }
 
 export function signOut() {
-  try {
-    window.localStorage.removeItem(AUTH_KEY);
-  } catch {
-    /* ignore */
-  }
-  authListeners.forEach((l) => l());
+  void fetch("/api/admin/session", { method: "DELETE" }).catch(() => {});
+  clearLocalSession();
 }
 
 /** undefined = not known yet (server / first paint), boolean afterwards. */

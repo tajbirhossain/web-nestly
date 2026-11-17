@@ -43,7 +43,20 @@ The demo runs on a Neon Postgres project (see `neon.ts`). The Neon CLI is a devD
 2. `npm run db:setup` creates the tables (`db/schema.sql`).
 3. Run `npm run dev`, open `/admin` and sign in. The first load seeds the demo data.
 
-Without `DATABASE_URL` the site runs on built-in sample data and admin edits stay in the browser. There is no auth: the `/api/admin/db` endpoint is open, so demo only.
+Without `DATABASE_URL` the site runs on built-in sample data and admin edits stay in the browser.
+
+## Admin sign-in
+
+Every `/api/admin/*` route requires a signed, HttpOnly session cookie issued by `/api/admin/session`.
+
+- **Production:** set `ADMIN_PASSWORD` (and optionally `ADMIN_EMAIL`, default `admin@nestly.nyc`, and `ADMIN_SESSION_SECRET`). Without `ADMIN_PASSWORD`, admin login is disabled.
+- **Local development:** without `ADMIN_PASSWORD`, the demo login `admin@nestly.nyc` / `nestly-admin` works.
+
+## Pricing
+
+Each listing has a base monthly price plus optional custom prices for specific months (`monthlyPrices`, keyed `YYYY-MM`, so each year is separate). Stays are charged per night at each month's rate ÷ that month's days, rounded to the cent per month (`lib/pricing.ts`). The booking API always prices from the database and stores the result on the booking as `quote`. Clients can't set or change it. Bookings made before this change have no `quote` and keep their original estimate.
+
+Run the tests with `npm test`.
 
 ## Photo uploads (Vercel Blob)
 

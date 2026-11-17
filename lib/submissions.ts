@@ -1,6 +1,7 @@
 import type { Booking, HostApplication, Inquiry, InquiryType } from "@/lib/admin/types";
 import { dbEnabled, sql, type Table } from "@/lib/db";
 import { boroughs, type Borough } from "@/lib/data";
+import type { BookingQuote } from "@/lib/pricing";
 
 // Stores public-form submissions in the same tables the admin reads.
 type Body = Record<string, string>;
@@ -23,7 +24,7 @@ async function listingIdFor(slug: string) {
 const bedsFrom = (v = "") => (/studio/i.test(v) ? 0 : Number.parseInt(v, 10) || 1);
 
 /** Returns true when the submission was stored in the database, false when no database is configured. */
-export async function saveSubmission(type: string, body: Body, name: string): Promise<boolean> {
+export async function saveSubmission(type: string, body: Body, name: string, quote?: BookingQuote): Promise<boolean> {
   if (!dbEnabled) return false;
   const email = body.email.trim();
   const phone = body.phone ?? "";
@@ -43,6 +44,8 @@ export async function saveSubmission(type: string, body: Body, name: string): Pr
       message: body.message ?? "",
       notes: "",
       createdAt: now(),
+      // Computed by the booking API from stored prices; the request body never supplies it.
+      ...(quote ? { quote } : {}),
     };
     return insert("bookings", booking);
   }

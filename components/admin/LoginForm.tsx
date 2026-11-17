@@ -12,15 +12,19 @@ export default function LoginForm() {
   const [email, setEmail] = useState(DEMO_LOGIN.email);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (session) router.replace("/admin");
   }, [session, router]);
 
-  function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!signIn(email, password)) {
-      setError("That email or password isn't right.");
+    setBusy(true);
+    const problem = await signIn(email, password);
+    setBusy(false);
+    if (problem) {
+      setError(problem);
       return;
     }
     router.replace("/admin");
@@ -48,12 +52,14 @@ export default function LoginForm() {
               <input id={id} type="password" className="a-input" autoComplete="current-password" value={password} onChange={(e) => { setPassword(e.target.value); setError(""); }} autoFocus />
             )}
           </Field>
-          <button type="submit" className="a-btn a-btn-primary w-full">Sign in</button>
+          <button type="submit" className="a-btn a-btn-primary w-full disabled:opacity-60" disabled={busy}>{busy ? "Signing in…" : "Sign in"}</button>
         </form>
 
-        <p className="mt-4 rounded-xl bg-brand-tint px-4 py-3 text-center text-[13px] text-brand-dark">
-          Demo mode — password is <code className="font-semibold">{DEMO_LOGIN.password}</code>. Real authentication comes with the database.
-        </p>
+        {process.env.NODE_ENV !== "production" && (
+          <p className="mt-4 rounded-xl bg-brand-tint px-4 py-3 text-center text-[13px] text-brand-dark">
+            Local development — without <code className="font-semibold">ADMIN_PASSWORD</code> set, the password is <code className="font-semibold">{DEMO_LOGIN.password}</code>.
+          </p>
+        )}
       </div>
     </div>
   );

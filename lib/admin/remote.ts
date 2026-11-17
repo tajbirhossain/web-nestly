@@ -6,6 +6,9 @@ const COLLECTIONS: CollectionKey[] = ["listings", "bookings", "inquiries", "host
 const SETTINGS_ID = "main";
 type Table = CollectionKey | "settings";
 
+/** The server rejected the admin session (missing or expired cookie). */
+export class AuthError extends Error {}
+
 async function call(init?: { body: unknown }) {
   const res = await fetch("/api/admin/db", {
     method: init ? "POST" : "GET",
@@ -14,6 +17,7 @@ async function call(init?: { body: unknown }) {
     cache: "no-store",
   });
   const json = await res.json().catch(() => ({}));
+  if (res.status === 401) throw new AuthError(json.error ?? "Please sign in again");
   if (!res.ok) throw new Error(json.error ?? `Request failed (${res.status})`);
   return json;
 }

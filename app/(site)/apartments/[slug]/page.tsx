@@ -242,7 +242,7 @@ async function Apartment({ params }: { params: Promise<{ slug: string }> }) {
         </div>
 
         <aside className="pt-8 lg:sticky lg:top-40 lg:self-start">
-          <BookingCard slug={apt.slug} title={apt.title} price={apt.price} availableFrom={apt.availableFrom} childrenAllowed={allowsChildren(apt)} terms={terms} blocked={blocked} bookingsOpen={bookingsOpen} />
+          <BookingCard slug={apt.slug} title={apt.title} price={apt.price} monthlyPrices={apt.monthlyPrices} availableFrom={apt.availableFrom} childrenAllowed={allowsChildren(apt)} terms={terms} blocked={blocked} bookingsOpen={bookingsOpen} />
         </aside>
       </div>
     </div>

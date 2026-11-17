@@ -1,8 +1,9 @@
 import { NextResponse, after } from "next/server";
 import { allowsChildren, termsOf } from "@/lib/data";
 import { fetchBookedRanges, overlaps } from "@/lib/availability";
-import { getApartment } from "@/lib/listings";
+import { fetchApartment } from "@/lib/listings";
 import { notifySubmission } from "@/lib/notifications";
+import { PricingError, isISODate, quoteStay, type BookingQuote } from "@/lib/pricing";
 import { fetchSettings } from "@/lib/settings";
 import { saveSubmission } from "@/lib/submissions";
 
@@ -23,6 +24,7 @@ export async function POST(req: Request) {
   if (typeof message === "string" && message.length > 5000) {
     return NextResponse.json({ error: "Message too long" }, { status: 422 });
   }
+  let quote: BookingQuote | undefined;
   // Bookings carry an adults/children split; refuse children on homes that do not allow them.
   if (type === "booking") {
     const adults = Number(body.adults || 0);
@@ -44,26 +46,48 @@ export async function POST(req: Request) {
     if (nights < settings.minStayDays) {
       return NextResponse.json({ error: `The minimum stay is ${settings.minStayDays} nights` }, { status: 422 });
     }
-    if (body.apartment && overlaps(await fetchBookedRanges(body.apartment), movein, moveout)) {
+    if (!isISODate(movein) || !isISODate(moveout)) {
+      return NextResponse.json({ error: "Please choose valid check-in and check-out dates" }, { status: 422 });
+    }
+    // Every booking must be for a real, published home: that's where its price comes from.
+    if (typeof body.apartment !== "string" || !body.apartment) {
+      return NextResponse.json({ error: "Please choose a home to book" }, { status: 422 });
+    }
+    let apt;
+    try {
+      apt = await fetchApartment(body.apartment);
+    } catch (e) {
+      console.error("[inquiry] could not load home for pricing:", e);
+      return NextResponse.json({ error: "We couldn't check this home right now. Please try again." }, { status: 503 });
+    }
+    if (!apt) return NextResponse.json({ error: "This home isn't available to book" }, { status: 422 });
+    if (overlaps(await fetchBookedRanges(apt.slug), movein, moveout)) {
       return NextResponse.json({ error: "Those dates were just booked. Please choose different dates." }, { status: 409 });
     }
-    const apt = body.apartment ? await getApartment(body.apartment) : undefined;
-    if (children > 0 && apt && !allowsChildren(apt)) {
+    if (children > 0 && !allowsChildren(apt)) {
       return NextResponse.json({ error: "This home does not allow children" }, { status: 422 });
     }
-    if (apt && adults + children > termsOf(apt).maxGuests) {
+    if (adults + children > termsOf(apt).maxGuests) {
       return NextResponse.json({ error: `This home sleeps up to ${termsOf(apt).maxGuests} guests` }, { status: 422 });
+    }
+    // The price is always computed here from stored listing data. Any price, total or
+    // quote fields the browser sends are ignored: nothing below reads them.
+    try {
+      quote = quoteStay({ price: apt.price, monthlyPrices: apt.monthlyPrices, cleaningFee: termsOf(apt).cleaningFee }, movein, moveout);
+    } catch (e) {
+      if (e instanceof PricingError) return NextResponse.json({ error: e.message }, { status: 422 });
+      throw e;
     }
   }
   // Stored in the database so it shows up in the admin. TODO: also email hello@nestly.nyc (Resend/SMTP).
   try {
-    const stored = await saveSubmission(type, body, name);
+    const stored = await saveSubmission(type, body, name, quote);
     if (!stored) console.log("[inquiry] no database configured, not stored:", type, { name, email });
     // Email after the response is sent so the guest never waits on the mail provider.
-    after(async () => notifySubmission(type, body, name, await fetchSettings()));
+    after(async () => notifySubmission(type, body, name, await fetchSettings(), quote));
   } catch (e) {
     console.error("[inquiry] could not store submission:", e);
     return NextResponse.json({ error: "We couldn't save your request. Please try again." }, { status: 500 });
   }
-  return NextResponse.json({ ok: true });
+  return NextResponse.json(quote ? { ok: true, quote: { nights: quote.nights, rentCents: quote.rentCents, cleaningFeeCents: quote.cleaningFeeCents, totalCents: quote.totalCents } } : { ok: true });
 }

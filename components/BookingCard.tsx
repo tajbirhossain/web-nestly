@@ -1,18 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useMinNights } from "@/components/BookingRules";
 import InquiryForm from "@/components/InquiryForm";
 import Modal from "@/components/ui/Modal";
 import { DatesPicker, GuestsPicker, guestLabel, guestTotal, noGuests } from "@/components/ui/Pickers";
 import { fmtShort, fromISO, nightsBetween } from "@/components/ui/dates";
 import { money, type Terms } from "@/lib/data";
+import { fmtCents, fmtMonth, quoteStay, type MonthlyPrices } from "@/lib/pricing";
 
 export default function BookingCard({
   slug,
   title,
   price,
+  monthlyPrices,
   availableFrom,
   childrenAllowed = true,
   terms,
@@ -21,7 +23,10 @@ export default function BookingCard({
 }: {
   slug: string;
   title: string;
+  /** Base monthly price. */
   price: number;
+  /** Custom prices for specific months ("YYYY-MM"). */
+  monthlyPrices?: MonthlyPrices;
   availableFrom: string;
   childrenAllowed?: boolean;
   terms: Pick<Terms, "cleaningFee" | "securityDeposit" | "maxGuests" | "minGuestAge">;
@@ -40,12 +45,17 @@ export default function BookingCard({
   const picker = useRef<HTMLDivElement>(null);
 
   const nights = start && end ? nightsBetween(fromISO(start), fromISO(end)) : 0;
-  // Sample pricing: full 30-night months at the monthly rate, extra nights pro-rated. Final total is confirmed by Nestly.
-  const fullMonths = Math.floor(nights / 30);
-  const extraNights = nights - fullMonths * 30;
-  const extraCost = Math.round((price * extraNights) / 30);
-  const rent = price * fullMonths + extraCost;
-  const total = rent + terms.cleaningFee;
+  // Display estimate only, using the same calculation as the server. The booking API
+  // re-prices the stay from the stored listing; nothing priced here is ever sent.
+  const quote = useMemo(() => {
+    if (!start || !end || nights < 1) return null;
+    try {
+      return quoteStay({ price, monthlyPrices, cleaningFee: terms.cleaningFee }, start, end);
+    } catch {
+      return null;
+    }
+  }, [price, monthlyPrices, terms.cleaningFee, start, end, nights]);
+  const hasCustomPrices = Object.keys(monthlyPrices ?? {}).length > 0;
 
   return (
     <div className="space-y-3">
@@ -57,6 +67,7 @@ export default function BookingCard({
           {money(price)}
           <span className="font-sans text-base font-normal text-muted"> / month</span>
         </p>
+        {hasCustomPrices && <p className="mt-1 text-xs text-muted">Rates vary for some months. Add dates to see your price.</p>}
 
         <div ref={picker} className="mt-4 space-y-2.5">
           <DatesPicker start={start} end={end} blocked={blocked} onChange={(s, e) => { setStart(s); setEnd(e); }} variant="field" placeholder="Select dates" align="right" panelClass="w-[720px]" />
@@ -65,15 +76,19 @@ export default function BookingCard({
           <p className="px-1 text-xs text-muted">Sleeps up to {terms.maxGuests} · primary guest {terms.minGuestAge}+</p>
         </div>
 
-        {nights >= minNights ? (
+        {nights >= minNights && quote ? (
           <dl className="mt-4 space-y-2 border-t border-line pt-4 text-sm">
             <div className="flex justify-between"><dt className="text-muted">{fmtShort(start)} – {fmtShort(end)}</dt><dd>{nights} nights</dd></div>
-            <div className="flex justify-between"><dt className="text-muted">{money(price)} × {fullMonths} month{fullMonths > 1 ? "s" : ""}</dt><dd>{money(price * fullMonths)}</dd></div>
-            {extraNights > 0 && (
-              <div className="flex justify-between"><dt className="text-muted">{extraNights} extra night{extraNights > 1 ? "s" : ""}</dt><dd>{money(extraCost)}</dd></div>
-            )}
-            <div className="flex justify-between"><dt className="text-muted">Cleaning fee (one-time)</dt><dd>{money(terms.cleaningFee)}</dd></div>
-            <div className="flex justify-between border-t border-line pt-2 font-medium"><dt>Estimated total</dt><dd className="font-serif text-lg">{money(total)}</dd></div>
+            {quote.segments.map((s) => (
+              <div key={s.month} className="flex justify-between gap-3">
+                <dt className="text-muted">
+                  {fmtMonth(s.month)} · {s.nights === s.daysInMonth ? "full month" : `${s.nights} night${s.nights > 1 ? "s" : ""}`} at {fmtCents(s.monthlyRateCents)}/mo
+                </dt>
+                <dd className="whitespace-nowrap">{fmtCents(s.amountCents)}</dd>
+              </div>
+            ))}
+            <div className="flex justify-between"><dt className="text-muted">Cleaning fee (one-time)</dt><dd>{fmtCents(quote.cleaningFeeCents)}</dd></div>
+            <div className="flex justify-between border-t border-line pt-2 font-medium"><dt>Estimated total</dt><dd className="font-serif text-lg">{fmtCents(quote.totalCents)}</dd></div>
             <div className="flex justify-between rounded-xl bg-soft px-3 py-2"><dt className="text-muted">Refundable security deposit</dt><dd className="font-medium">{money(terms.securityDeposit)}</dd></div>
             <p className="text-xs text-muted">The deposit is held separately and returned after move-out if there is no damage. Utilities &amp; Wi‑Fi typically included. Nestly confirms the final total with you — nothing is charged online.</p>
           </dl>
@@ -107,7 +122,7 @@ export default function BookingCard({
         <p className="mb-5 rounded-2xl bg-brand-tint p-4 text-sm">
           <strong className="font-medium">{title}</strong>
           <br />
-          {fmtShort(start || availableFrom)} – {end ? fmtShort(end) : "—"} · {nights} nights{guestTotal(guests) ? ` · ${guestLabel(guests)}` : ""} · est. {money(total)}
+          {fmtShort(start || availableFrom)} – {end ? fmtShort(end) : "—"} · {nights} nights{guestTotal(guests) ? ` · ${guestLabel(guests)}` : ""}{quote ? ` · est. ${fmtCents(quote.totalCents)}` : ""}
         </p>
         <InquiryForm
           type="booking"

@@ -1,4 +1,5 @@
 import type { Borough, Terms } from "@/lib/data";
+import type { BookingQuote, MonthlyPrices } from "@/lib/pricing";
 
 export type ListingStatus = "published" | "draft" | "archived";
 export type Listing = {
@@ -10,7 +11,9 @@ export type Listing = {
   beds: number; // 0 = studio
   baths: number;
   sqft: number;
-  price: number; // per month
+  price: number; // base price per month
+  /** Optional per-month overrides of the base price, keyed "YYYY-MM" (year-specific). */
+  monthlyPrices?: MonthlyPrices;
   availableFrom: string; // ISO date
   status: ListingStatus;
   featured: boolean;
@@ -42,6 +45,8 @@ export type Booking = {
   message: string;
   notes: string;
   createdAt: string;
+  /** Server-computed price at request time. Never set by the browser; absent on bookings made before quotes existed. */
+  quote?: BookingQuote;
 };
 
 export type InquiryType = "contact" | "corporate" | "relocation" | "newsletter";

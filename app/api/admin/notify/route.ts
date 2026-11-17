@@ -1,15 +1,18 @@
 import { NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/adminAuth";
 import { dbEnabled, sql } from "@/lib/db";
 import { sendEmail } from "@/lib/email";
 import { fetchSettings } from "@/lib/settings";
 import { siteUrl } from "@/lib/site";
 import type { Booking, HostApplication } from "@/lib/admin/types";
 
-// Emails the guest or host after the admin changes their status. Demo-only: no auth. It
-// re-reads the record from the database and only ever mails the address stored on it.
+// Emails the guest or host after the admin changes their status. Requires an admin session.
+// It re-reads the record from the database and only ever mails the address stored on it.
 type Body = { kind: "booking" | "host"; id: string; status: string };
 
 export async function POST(req: Request) {
+  const denied = requireAdmin(req);
+  if (denied) return denied;
   if (!dbEnabled) return NextResponse.json({ ok: false, skipped: "no database" });
   const body = (await req.json().catch(() => null)) as Body | null;
   if (!body || typeof body.id !== "string" || (body.kind !== "booking" && body.kind !== "host")) {
