@@ -115,7 +115,7 @@ export function Field({
   className = "",
 }: {
   label: string;
-  hint?: string;
+  hint?: ReactNode;
   error?: string;
   children: (id: string) => ReactNode;
   className?: string;

@@ -3,6 +3,7 @@ import { allowsChildren, termsOf } from "@/lib/data";
 import { fetchBookedRanges, overlaps } from "@/lib/availability";
 import { fetchApartment } from "@/lib/listings";
 import { notifySubmission } from "@/lib/notifications";
+import { snapshotPolicy, type PolicySnapshot } from "@/lib/cancellation";
 import { PricingError, isISODate, quoteStay, type BookingQuote } from "@/lib/pricing";
 import { fetchSettings } from "@/lib/settings";
 import { saveSubmission } from "@/lib/submissions";
@@ -25,6 +26,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Message too long" }, { status: 422 });
   }
   let quote: BookingQuote | undefined;
+  let policy: PolicySnapshot | undefined;
   // Bookings carry an adults/children split; refuse children on homes that do not allow them.
   if (type === "booking") {
     const adults = Number(body.adults || 0);
@@ -78,10 +80,12 @@ export async function POST(req: Request) {
       if (e instanceof PricingError) return NextResponse.json({ error: e.message }, { status: 422 });
       throw e;
     }
+    // Record the cancellation policy the guest was shown, so later edits don't change their terms.
+    policy = snapshotPolicy(termsOf(apt).cancellation, settings.cancellationPolicies);
   }
   // Stored in the database so it shows up in the admin. TODO: also email hello@nestly.nyc (Resend/SMTP).
   try {
-    const stored = await saveSubmission(type, body, name, quote);
+    const stored = await saveSubmission(type, body, name, quote, policy);
     if (!stored) console.log("[inquiry] no database configured, not stored:", type, { name, email });
     // Email after the response is sent so the guest never waits on the mail provider.
     after(async () => notifySubmission(type, body, name, await fetchSettings(), quote));

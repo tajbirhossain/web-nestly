@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Booking, Listing } from "@/lib/admin/types";
 
 // The booking API with a fake database. Listing rows here are the "trusted" prices.
-const db = vi.hoisted(() => ({ listings: [] as unknown[], inserted: [] as { table: string; data: unknown }[] }));
+const db = vi.hoisted(() => ({ listings: [] as unknown[], inserted: [] as { table: string; data: unknown }[], policies: [] as unknown[] }));
 
 vi.mock("@/lib/db", () => {
   const sql = Object.assign(
@@ -24,7 +24,7 @@ vi.mock("@/lib/db", () => {
   return { dbEnabled: true, sql, TABLES: [], isTable: () => true };
 });
 vi.mock("@/lib/settings", () => ({
-  fetchSettings: async () => ({ minStayDays: 30, bookingsOpen: true, notifyBookings: false, notifyInquiries: false, notifyHosts: false, supportEmail: "", siteName: "Nestly", phone: "" }),
+  fetchSettings: async () => ({ minStayDays: 30, bookingsOpen: true, notifyBookings: false, notifyInquiries: false, notifyHosts: false, supportEmail: "", siteName: "Nestly", phone: "", cancellationPolicies: db.policies }),
 }));
 vi.mock("@/lib/notifications", () => ({ notifySubmission: vi.fn() }));
 vi.mock("next/server", async (orig) => ({ ...(await orig<typeof import("next/server")>()), after: vi.fn() }));
@@ -56,6 +56,7 @@ const storedBooking = () => db.inserted.find((r) => r.table === "bookings")?.dat
 beforeEach(() => {
   db.listings = [listing({ monthlyPrices: { "2026-12": 1500 } })];
   db.inserted = [];
+  db.policies = [];
 });
 
 describe("booking API pricing", () => {
@@ -127,5 +128,34 @@ describe("booking API pricing", () => {
   it("rejects impossible calendar dates", async () => {
     const res = await request(booking({ movein: "2026-02-30", moveout: "2026-04-15" }));
     expect(res.status).toBe(422);
+  });
+});
+
+describe("booking API cancellation policy", () => {
+  const holiday = { id: "cp_holiday1", name: "Holiday season", summary: "Non-refundable for December move-ins.", details: "Full terms." };
+
+  it("stores the home's standard policy on the booking", async () => {
+    await request(booking());
+    expect(storedBooking()!.cancellationPolicy).toMatchObject({ id: "moderate", name: "Moderate", standard: true });
+  });
+
+  it("stores a special policy with its full wording", async () => {
+    db.policies = [holiday];
+    db.listings = [listing({ cancellation: "cp_holiday1" })];
+    await request(booking());
+    expect(storedBooking()!.cancellationPolicy).toEqual({ ...holiday, standard: false });
+  });
+
+  it("falls back to the default if the home's special policy was deleted", async () => {
+    db.listings = [listing({ cancellation: "cp_deleted1" })];
+    const res = await request(booking());
+    expect(res.status).toBe(200);
+    expect(storedBooking()!.cancellationPolicy?.id).toBe("moderate");
+  });
+
+  it("ignores a policy sent by the browser", async () => {
+    db.listings = [listing({ cancellation: "strict" })];
+    await request(booking({ cancellation: "flexible", cancellationPolicy: { id: "flexible", name: "Free", summary: "Always refundable" } }));
+    expect(storedBooking()!.cancellationPolicy).toMatchObject({ id: "strict", name: "Strict" });
   });
 });

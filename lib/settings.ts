@@ -1,5 +1,6 @@
 import { cacheLife, cacheTag } from "next/cache";
 import type { Settings } from "@/lib/admin/types";
+import { readPolicies } from "@/lib/cancellation";
 import { dbEnabled, sql } from "@/lib/db";
 
 // Everything the admin controls on its Settings page, with safe defaults.
@@ -15,6 +16,7 @@ const defaults: SiteSettings = {
   notifyBookings: true,
   notifyInquiries: true,
   notifyHosts: true,
+  cancellationPolicies: [],
 };
 
 /** Always reads the database; used by APIs so a request is judged on the latest rules. */
@@ -29,6 +31,7 @@ export async function fetchSettings(): Promise<SiteSettings> {
       phone: s.phone ?? defaults.phone,
       minStayDays: Number.isFinite(s.minStayDays) && s.minStayDays! >= 1 ? s.minStayDays! : defaults.minStayDays,
       bookingsOpen: s.bookingsOpen ?? defaults.bookingsOpen,
+      cancellationPolicies: readPolicies(s.cancellationPolicies),
     };
   } catch (e) {
     console.error("[settings] database read failed, using defaults:", e);

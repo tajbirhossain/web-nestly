@@ -30,9 +30,10 @@ export async function POST(req: Request) {
       const home = (listing[0]?.title as string | undefined) ?? "your home";
       const link = listing[0]?.slug ? `\n${siteUrl}/apartments/${listing[0].slug}` : "";
       const stay = `${home}${link}\n${b.checkIn} to ${b.checkOut}`;
+      const terms = b.cancellationPolicy ? `\n\nCancellation policy (${b.cancellationPolicy.name}): ${b.cancellationPolicy.summary}` : "";
       const mail =
         b.status === "confirmed"
-          ? { subject: `Your stay is confirmed | ${settings.siteName}`, text: `Hi ${b.guestName},\n\nGood news: your stay is confirmed.\n\n${stay}\n\nWe'll email move-in details shortly. Reply to this email with any questions.${sign}` }
+          ? { subject: `Your stay is confirmed | ${settings.siteName}`, text: `Hi ${b.guestName},\n\nGood news: your stay is confirmed.\n\n${stay}${terms}\n\nWe'll email move-in details shortly. Reply to this email with any questions.${sign}` }
           : b.status === "declined"
             ? { subject: `About your booking request | ${settings.siteName}`, text: `Hi ${b.guestName},\n\nThank you for your interest. Unfortunately we can't offer these dates:\n\n${stay}\n\nReply and we'll gladly suggest other homes or dates.${sign}` }
             : b.status === "cancelled"

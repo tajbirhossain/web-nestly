@@ -9,7 +9,8 @@ import { uploadImage } from "@/lib/admin/upload";
 import type { Listing, ListingStatus } from "@/lib/admin/types";
 import { AmenityIcon } from "@/components/ui/icons";
 import { allAmenities, amenityCatalog, amenityIconKey } from "@/lib/amenities";
-import { boroughs, cancellationInfo, type Borough, type Cancellation } from "@/lib/data";
+import { DEFAULT_POLICY_ID, STANDARD_POLICIES, findPolicy } from "@/lib/cancellation";
+import { boroughs, type Borough, type Cancellation } from "@/lib/data";
 import { MONTH_KEY, fmtMonth } from "@/lib/pricing";
 import { useFeedback } from "./feedback";
 import { Icon } from "./icons";
@@ -48,7 +49,7 @@ const AREA_CENTER: Record<Borough, [number, number]> = {
 
 const blankForm = (): Form => ({
   cleaningFee: "200", securityDeposit: "", maxGuests: "2", minGuestAge: "18", checkInTime: "3:00 PM", checkOutTime: "11:00 AM",
-  cancellation: "moderate", specialInstructions: "", childrenAllowed: true, utilitiesIncluded: true, smokingAllowed: false, partiesAllowed: false,
+  cancellation: DEFAULT_POLICY_ID, specialInstructions: "", childrenAllowed: true, utilitiesIncluded: true, smokingAllowed: false, partiesAllowed: false,
   title: "", neighborhood: "", borough: "Manhattan", beds: "1", baths: "1", sqft: "", price: "",
   availableFrom: todayISO(), status: "draft", featured: false, images: [], description: "", amenities: [],
   address: "", lat: null, lng: null, customPrices: [],
@@ -85,6 +86,7 @@ function ListingForm({ listing }: { listing?: Listing }) {
   const router = useRouter();
   const { toast } = useFeedback();
   const db = useDB();
+  const specialPolicies = db.settings.cancellationPolicies ?? [];
   const [f, setF] = useState<Form>(() => (listing ? toForm(listing) : blankForm()));
   const [errors, setErrors] = useState<Partial<Record<keyof Form, string>>>({});
   const set = <K extends keyof Form>(k: K, v: Form[K]) => {
@@ -130,6 +132,7 @@ function ListingForm({ listing }: { listing?: Listing }) {
     const months = f.customPrices.map((r) => r.month);
     if (f.customPrices.some((r) => !MONTH_KEY.test(r.month) || !(Number(r.price) > 0))) e.customPrices = "Each custom price needs a month and a price above 0";
     else if (new Set(months).size !== months.length) e.customPrices = "Each month can only have one custom price";
+    if (!findPolicy(f.cancellation, specialPolicies)) e.cancellation = "This policy was removed. Choose another one";
     setErrors(e);
     if (Object.keys(e).length) {
       toast("Please fix the highlighted fields", "bad");
@@ -314,10 +317,28 @@ function ListingForm({ listing }: { listing?: Listing }) {
             <Field label="Check-out by">
               {(id) => <select id={id} className="a-input" value={f.checkOutTime} onChange={(e) => set("checkOutTime", e.target.value)}>{times.map((t) => <option key={t}>{t}</option>)}</select>}
             </Field>
-            <Field label="Cancellation policy" className="sm:col-span-2" hint={cancellationInfo[f.cancellation].text}>
+            <Field
+              label="Cancellation policy"
+              className="sm:col-span-2"
+              error={errors.cancellation}
+              hint={
+                <>
+                  {findPolicy(f.cancellation, specialPolicies)?.summary}{" "}
+                  <Link href="/admin/settings#cancellation" className="font-medium text-brand underline underline-offset-2">Manage policies</Link>
+                </>
+              }
+            >
               {(id) => (
-                <select id={id} className="a-input" value={f.cancellation} onChange={(e) => set("cancellation", e.target.value as Cancellation)}>
-                  {(Object.keys(cancellationInfo) as Cancellation[]).map((c) => <option key={c} value={c}>{cancellationInfo[c].label}</option>)}
+                <select id={id} className="a-input" value={f.cancellation} onChange={(e) => set("cancellation", e.target.value)}>
+                  {!findPolicy(f.cancellation, specialPolicies) && <option value={f.cancellation} disabled>Removed policy, choose another</option>}
+                  <optgroup label="Standard policies">
+                    {STANDARD_POLICIES.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </optgroup>
+                  {specialPolicies.length > 0 && (
+                    <optgroup label="Special policies">
+                      {specialPolicies.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </optgroup>
+                  )}
                 </select>
               )}
             </Field>
