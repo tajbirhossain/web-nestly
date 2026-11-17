@@ -7,7 +7,9 @@ import { slugify, todayISO, uid } from "@/lib/admin/format";
 import { actions, useDB } from "@/lib/admin/store";
 import { uploadImage } from "@/lib/admin/upload";
 import type { Listing, ListingStatus } from "@/lib/admin/types";
-import { boroughs, cancellationInfo, featureFilters, type Borough, type Cancellation } from "@/lib/data";
+import { AmenityIcon } from "@/components/ui/icons";
+import { allAmenities, amenityCatalog, amenityIconKey } from "@/lib/amenities";
+import { boroughs, cancellationInfo, type Borough, type Cancellation } from "@/lib/data";
 import { MONTH_KEY, fmtMonth } from "@/lib/pricing";
 import { useFeedback } from "./feedback";
 import { Icon } from "./icons";
@@ -379,27 +381,7 @@ function ListingForm({ listing }: { listing?: Listing }) {
             {errors.images && <p className="a-error">{errors.images}</p>}
           </section>
 
-          <section className="a-card p-5">
-            <h2 className="mb-3 text-lg">Amenities</h2>
-            <div className="flex flex-wrap gap-2">
-              {[...new Set([...featureFilters, ...f.amenities])].map((a) => {
-                const on = f.amenities.includes(a);
-                return (
-                  <button
-                    key={a}
-                    type="button"
-                    aria-pressed={on}
-                    onClick={() => toggle("amenities", a)}
-                    className={`inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-medium ${
-                      on ? "border-brand bg-brand-tint text-brand-dark" : "border-line bg-white text-muted hover:text-foreground"
-                    }`}
-                  >
-                    {on && <Icon name="check" size={13} />} {a}
-                  </button>
-                );
-              })}
-            </div>
-          </section>
+          <AmenitiesPicker selected={f.amenities} onToggle={(a) => toggle("amenities", a)} onAdd={(a) => set("amenities", [...f.amenities, a])} />
         </div>
 
         <aside className="flex flex-col gap-6 lg:sticky lg:top-20 lg:self-start">
@@ -428,5 +410,80 @@ function ListingForm({ listing }: { listing?: Listing }) {
         </aside>
       </div>
     </>
+  );
+}
+
+/** Amenity checklist grouped like the public listing, plus custom amenities the catalog doesn't cover. */
+function AmenitiesPicker({ selected, onToggle, onAdd }: { selected: string[]; onToggle: (a: string) => void; onAdd: (a: string) => void }) {
+  const [custom, setCustom] = useState("");
+  const [error, setError] = useState("");
+  const known = new Set(allAmenities.map((a) => a.name.toLowerCase()));
+  const extras = selected.filter((a) => !known.has(a.toLowerCase()));
+  const chip = (name: string) => {
+    const on = selected.includes(name);
+    return (
+      <button
+        key={name}
+        type="button"
+        aria-pressed={on}
+        onClick={() => onToggle(name)}
+        className={`inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-medium ${
+          on ? "border-brand bg-brand-tint text-brand-dark" : "border-line bg-white text-muted hover:text-foreground"
+        }`}
+      >
+        {amenityIconKey(name) !== "check" && <AmenityIcon name={name} size={15} />} {name}
+        {on && <Icon name="check" size={13} />}
+      </button>
+    );
+  };
+
+  function add() {
+    const name = custom.trim().replace(/\s+/g, " ");
+    if (!name) return;
+    if (name.length > 40) return setError("Keep it under 40 characters");
+    // Reuse the catalog spelling when it matches, so filters and icons still work.
+    const match = allAmenities.find((a) => a.name.toLowerCase() === name.toLowerCase())?.name;
+    const existing = selected.find((a) => a.toLowerCase() === name.toLowerCase());
+    if (existing) return setError(`"${existing}" is already selected`);
+    if (match) onToggle(match);
+    else onAdd(name);
+    setCustom("");
+    setError("");
+  }
+
+  return (
+    <section className="a-card p-5">
+      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="text-lg">Amenities</h2>
+        <span className="text-[13px] text-muted">{selected.length} selected</span>
+      </div>
+      <div className="flex flex-col gap-5">
+        {amenityCatalog.map((c) => (
+          <div key={c.title}>
+            <h3 className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-muted">{c.title}</h3>
+            <div className="flex flex-wrap gap-2">{c.items.map((a) => chip(a.name))}</div>
+          </div>
+        ))}
+        <div>
+          <h3 className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-muted">Other</h3>
+          {extras.length > 0 && <div className="mb-3 flex flex-wrap gap-2">{extras.map(chip)}</div>}
+          <div className="flex flex-wrap gap-2">
+            <input
+              aria-label="Custom amenity"
+              className="a-input min-w-0 flex-1 sm:max-w-xs"
+              placeholder="Add another amenity, e.g. Fireplace"
+              value={custom}
+              maxLength={60}
+              onChange={(e) => { setCustom(e.target.value); setError(""); }}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
+            />
+            <button type="button" className="a-btn a-btn-outline" onClick={add} disabled={!custom.trim()}>
+              <Icon name="plus" size={14} /> Add
+            </button>
+          </div>
+          {error && <p className="a-error">{error}</p>}
+        </div>
+      </div>
+    </section>
   );
 }
