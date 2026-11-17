@@ -1,4 +1,5 @@
 import { sendEmail } from "@/lib/email";
+import { fmtCents, type BookingQuote } from "@/lib/pricing";
 import type { SiteSettings } from "@/lib/settings";
 import { siteUrl } from "@/lib/site";
 
@@ -17,7 +18,7 @@ const lines = (rows: [string, string | undefined][]) =>
   rows.filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`).join("\n");
 
 /** Emails the team (per the admin's notification toggles) and sends the guest a short acknowledgement. */
-export async function notifySubmission(type: string, body: Body, name: string, settings: SiteSettings) {
+export async function notifySubmission(type: string, body: Body, name: string, settings: SiteSettings, quote?: BookingQuote) {
   const enabled = type === "booking" ? settings.notifyBookings : type === "host" ? settings.notifyHosts : settings.notifyInquiries;
   const label = LABEL[type] ?? "New request";
   const details = lines([
@@ -28,6 +29,7 @@ export async function notifySubmission(type: string, body: Body, name: string, s
     ["Home", body.apartment ? `${siteUrl}/apartments/${body.apartment}` : undefined],
     ["Dates", body.movein && body.moveout ? `${body.movein} to ${body.moveout}` : undefined],
     ["Guests", body.adults ? `${body.adults} adult(s), ${body.children || 0} child(ren)` : undefined],
+    ["Estimated total", quote ? `${fmtCents(quote.totalCents)} (rent ${fmtCents(quote.rentCents)} + cleaning ${fmtCents(quote.cleaningFeeCents)})` : undefined],
     ["Address", body.address],
     ["Area", body.borough],
     ["Expected rent", body.rent],

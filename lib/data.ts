@@ -14,7 +14,9 @@ export type Apartment = {
   beds: number; // 0 = studio
   baths: number;
   sqft: number;
-  price: number; // per month
+  price: number; // base price per month
+  /** Optional per-month overrides of the base price, keyed "YYYY-MM". */
+  monthlyPrices?: Record<string, number>;
   lat: number;
   lng: number;
   availableFrom: string; // ISO date

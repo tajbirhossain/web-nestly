@@ -7,6 +7,7 @@ import { fmtDate, timeAgo } from "@/lib/admin/format";
 import { actions, useDB } from "@/lib/admin/store";
 import type { Booking, BookingStatus } from "@/lib/admin/types";
 import { money } from "@/lib/data";
+import { fmtCents, fmtMonth } from "@/lib/pricing";
 import { useFeedback } from "./feedback";
 import { Icon } from "./icons";
 import { EmptyState, Overlay, PageHeader, SearchBox, Segmented, StatusBadge } from "./ui";
@@ -168,11 +169,41 @@ function BookingDetail({ booking: b }: { booking: Booking }) {
         <Info label="Check-out" value={fmtDate(b.checkOut)} />
         <Info label="Length" value={`${nightsOf(b)} nights`} />
         <Info label="Guests" value={guestSummary(b)} />
-        <Info label="Estimated value" value={listing ? money(Math.round(bookingValue(b, listing))) : "—"} />
-        {listing && <Info label="Cleaning fee" value={money(listing.cleaningFee)} />}
+        {b.quote ? (
+          <Info label="Quoted total" value={fmtCents(b.quote.totalCents)} />
+        ) : (
+          <Info label="Estimated value" value={listing ? money(Math.round(bookingValue(b, listing))) : "—"} />
+        )}
+        {b.quote ? (
+          <Info label="Cleaning fee" value={fmtCents(b.quote.cleaningFeeCents)} />
+        ) : (
+          listing && <Info label="Cleaning fee" value={money(listing.cleaningFee)} />
+        )}
         {listing && <Info label="Security deposit" value={`${money(listing.securityDeposit)} (refundable)`} />}
         <Info label="Received" value={timeAgo(b.createdAt)} />
       </dl>
+
+      {b.quote && (
+        <section>
+          <h3 className="mb-2 text-base">Price breakdown</h3>
+          <table className="w-full text-[13px]">
+            <tbody>
+              {b.quote.segments.map((s) => (
+                <tr key={s.month} className="border-b border-line">
+                  <td className="py-1.5">
+                    {fmtMonth(s.month)} · {s.nights} of {s.daysInMonth} nights
+                    <span className="text-muted"> at {fmtCents(s.monthlyRateCents)}/mo{s.custom ? " (custom)" : ""}</span>
+                  </td>
+                  <td className="py-1.5 text-right">{fmtCents(s.amountCents)}</td>
+                </tr>
+              ))}
+              <tr className="border-b border-line"><td className="py-1.5">Cleaning fee</td><td className="py-1.5 text-right">{fmtCents(b.quote.cleaningFeeCents)}</td></tr>
+              <tr className="font-medium"><td className="py-1.5">Total</td><td className="py-1.5 text-right">{fmtCents(b.quote.totalCents)}</td></tr>
+            </tbody>
+          </table>
+          <p className="mt-1.5 text-[12px] text-muted">Calculated by the server from the listing&apos;s prices when the request arrived. Later price changes don&apos;t affect it.</p>
+        </section>
+      )}
 
       <section>
         <h3 className="mb-2 text-base">Apartment</h3>

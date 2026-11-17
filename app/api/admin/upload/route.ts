@@ -1,12 +1,15 @@
 import { put } from "@vercel/blob";
 import { NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/adminAuth";
 
-// Demo-only image upload for the admin: no auth, so don't expose this publicly.
+// Image upload for the admin. Requires an admin session.
 // The browser resizes photos before sending, so files stay well under Vercel's 4.5 MB request limit.
 const TYPES: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
 const MAX_BYTES = 4 * 1024 * 1024;
 
 export async function POST(req: Request) {
+  const denied = requireAdmin(req);
+  if (denied) return denied;
   if (!process.env.BLOB_READ_WRITE_TOKEN) {
     return NextResponse.json(
       { error: "Image storage isn't set up yet: add a Blob store to the Vercel project and set BLOB_READ_WRITE_TOKEN." },

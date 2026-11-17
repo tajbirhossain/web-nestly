@@ -34,6 +34,7 @@ function toApartment(l: Listing): Apartment {
     baths: l.baths,
     sqft: l.sqft,
     price: l.price,
+    monthlyPrices: l.monthlyPrices,
     lat,
     lng,
     availableFrom: l.availableFrom,
@@ -64,13 +65,26 @@ export async function getApartments(): Promise<Apartment[]> {
   cacheTag("listings");
   // `stale` must stay >= 5 min or Next treats this as dynamic and drops it from the prerender.
   cacheLife({ stale: 300, revalidate: 30, expire: 3600 });
+  return loadApartments();
+}
 
+/**
+ * Uncached read of one published home, straight from the database. The booking API
+ * prices stays with this so a quote is always based on the latest stored prices.
+ * Throws if the database can't be read (no silent fallback to sample prices).
+ */
+export async function fetchApartment(slug: string): Promise<Apartment | undefined> {
+  return (await loadApartments(true)).find((a) => a.slug === slug);
+}
+
+async function loadApartments(strict = false): Promise<Apartment[]> {
   if (!dbEnabled) return sampleApartments;
   try {
     const rows = (await sql`select data from listings order by created_at desc`).map((r) => r.data as Listing);
     if (rows.length === 0) return sampleApartments; // fresh project: admin has not seeded yet
     return rows.filter((l) => l.status === "published").map(toApartment);
   } catch (e) {
+    if (strict) throw e;
     console.error("[listings] database read failed, using sample homes:", e);
     return sampleApartments;
   }

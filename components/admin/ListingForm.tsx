@@ -8,6 +8,7 @@ import { actions, useDB } from "@/lib/admin/store";
 import { uploadImage } from "@/lib/admin/upload";
 import type { Listing, ListingStatus } from "@/lib/admin/types";
 import { boroughs, cancellationInfo, featureFilters, type Borough, type Cancellation } from "@/lib/data";
+import { MONTH_KEY, fmtMonth } from "@/lib/pricing";
 import { useFeedback } from "./feedback";
 import { Icon } from "./icons";
 import LocationPicker from "./LocationPicker";
@@ -32,6 +33,8 @@ type Form = {
   price: string; availableFrom: string; status: ListingStatus; featured: boolean;
   images: string[]; description: string; amenities: string[];
   address: string; lat: number | null; lng: number | null;
+  /** Custom prices for specific months ("YYYY-MM"); each overrides the base price for that month only. */
+  customPrices: { month: string; price: string }[];
 };
 
 const AREA_CENTER: Record<Borough, [number, number]> = {
@@ -46,7 +49,7 @@ const blankForm = (): Form => ({
   cancellation: "moderate", specialInstructions: "", childrenAllowed: true, utilitiesIncluded: true, smokingAllowed: false, partiesAllowed: false,
   title: "", neighborhood: "", borough: "Manhattan", beds: "1", baths: "1", sqft: "", price: "",
   availableFrom: todayISO(), status: "draft", featured: false, images: [], description: "", amenities: [],
-  address: "", lat: null, lng: null,
+  address: "", lat: null, lng: null, customPrices: [],
 });
 
 const toForm = (l: Listing): Form => ({
@@ -57,6 +60,7 @@ const toForm = (l: Listing): Form => ({
   sqft: String(l.sqft), price: String(l.price), availableFrom: l.availableFrom, status: l.status,
   featured: l.featured, images: l.images, description: l.description, amenities: l.amenities,
   address: l.address ?? "", lat: l.lat ?? null, lng: l.lng ?? null,
+  customPrices: Object.entries(l.monthlyPrices ?? {}).sort(([a], [b]) => a.localeCompare(b)).map(([month, price]) => ({ month, price: String(price) })),
 });
 
 /** Route wrapper: resolves /admin/listings/[id] (or "new") to the right form. */
@@ -121,6 +125,9 @@ function ListingForm({ listing }: { listing?: Listing }) {
     if (!whole(f.maxGuests, 1, 20)) e.maxGuests = "Enter 1–20";
     if (!whole(f.minGuestAge, 18, 99)) e.minGuestAge = "Enter 18–99";
     if (!f.images.length && (statusOverride ?? f.status) === "published") e.images = "Select at least one photo to publish";
+    const months = f.customPrices.map((r) => r.month);
+    if (f.customPrices.some((r) => !MONTH_KEY.test(r.month) || !(Number(r.price) > 0))) e.customPrices = "Each custom price needs a month and a price above 0";
+    else if (new Set(months).size !== months.length) e.customPrices = "Each month can only have one custom price";
     setErrors(e);
     if (Object.keys(e).length) {
       toast("Please fix the highlighted fields", "bad");
@@ -143,6 +150,9 @@ function ListingForm({ listing }: { listing?: Listing }) {
       baths: Number(f.baths),
       sqft: Number(f.sqft),
       price: Number(f.price),
+      monthlyPrices: f.customPrices.length
+        ? Object.fromEntries([...f.customPrices].sort((a, b) => a.month.localeCompare(b.month)).map((r) => [r.month, Number(r.price)]))
+        : undefined,
       availableFrom: f.availableFrom,
       status: statusOverride ?? f.status,
       featured: f.featured,
@@ -233,10 +243,40 @@ function ListingForm({ listing }: { listing?: Listing }) {
               {(id) => <input id={id} type="number" min={1} max={10} step={0.5} className="a-input" value={f.baths} onChange={(e) => set("baths", e.target.value)} />}
             </Field>
             {num("sqft", "Size (sqft)")}
-            {num("price", "Price / month ($)", { step: 50 })}
+            {num("price", "Base price / month ($)", { step: 50 })}
             <Field label="Available from" className="col-span-2">
               {(id) => <input id={id} type="date" className="a-input" value={f.availableFrom} onChange={(e) => set("availableFrom", e.target.value)} />}
             </Field>
+          </section>
+
+          <section className="a-card p-5">
+            <h2 className="text-lg">Custom monthly prices</h2>
+            <p className="mb-3 text-muted">
+              The base price applies to every month unless you set a custom price here. Each one applies to that month of that year only
+              (December 2026 and December 2027 are separate). Stays that span months are charged per night at each month&apos;s rate.
+            </p>
+            {f.customPrices.length > 0 && (
+              <div className="mb-3 flex flex-col gap-2">
+                {f.customPrices.map((r, i) => {
+                  const update = (patch: Partial<typeof r>) =>
+                    set("customPrices", f.customPrices.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+                  return (
+                    <div key={i} className="flex flex-wrap items-center gap-2">
+                      <input type="month" aria-label="Month" className="a-input w-auto" value={r.month} onChange={(e) => update({ month: e.target.value })} />
+                      <input type="number" aria-label="Price for this month ($)" min={0} step={50} placeholder="Price / month ($)" className="a-input w-44" value={r.price} onChange={(e) => update({ price: e.target.value })} />
+                      {r.month && MONTH_KEY.test(r.month) && <span className="text-[13px] text-muted">{fmtMonth(r.month)}</span>}
+                      <button type="button" className="a-btn a-btn-outline a-btn-sm ml-auto" aria-label="Remove this custom price" onClick={() => set("customPrices", f.customPrices.filter((_, j) => j !== i))}>
+                        <Icon name="trash" size={14} /> Remove
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <button type="button" className="a-btn a-btn-outline a-btn-sm" onClick={() => set("customPrices", [...f.customPrices, { month: "", price: f.price }])}>
+              <Icon name="plus" size={14} /> Add a custom month
+            </button>
+            {errors.customPrices && <p className="a-error">{errors.customPrices}</p>}
           </section>
 
           <section className="a-card grid gap-4 p-5 sm:grid-cols-2">
