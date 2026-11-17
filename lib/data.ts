@@ -69,19 +69,8 @@ export const defaultTerms = (a: { beds: number; price: number }): Terms => ({
 
 export const termsOf = (a: Pick<Apartment, "beds" | "price" | "terms">): Terms => ({ ...defaultTerms(a), ...a.terms });
 
-/** Amenities that can be filtered on (and get icons). Listings use these exact strings. */
-export const featureFilters = [
-  "Wi‑Fi",
-  "Air conditioning",
-  "Fully equipped kitchen",
-  "Washer/dryer in unit",
-  "Dishwasher",
-  "Dedicated workspace",
-  "Pets allowed",
-  "Doorman",
-  "Gym",
-  "Towels & linens provided",
-] as const;
+/** Amenities that can be filtered on. The full grouped catalog (and icons) lives in lib/amenities.ts. */
+export { featureFilters } from "@/lib/amenities";
 
 // SAMPLE LISTINGS — the client confirmed these are placeholders (based on the WP
 // dev site). Replace with a CMS/API feed before launch.
