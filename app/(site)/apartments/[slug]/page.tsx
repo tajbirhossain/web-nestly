@@ -12,7 +12,8 @@ import ListingActions from "@/components/ListingActions";
 import MapView from "@/components/MapView";
 import SectionNav from "@/components/SectionNav";
 import { SqftIcon } from "@/components/ui/icons";
-import { allowsChildren, apartments as sampleHomes, cancellationInfo, termsOf, money, bedLabel, bedroomRows, features } from "@/lib/data";
+import { allowsChildren, apartments as sampleHomes, termsOf, money, bedLabel, bedroomRows, features } from "@/lib/data";
+import { paragraphs, resolvePolicy } from "@/lib/cancellation";
 import { buildNeighborhoods } from "@/lib/catalog";
 import ReviewForm from "@/components/ReviewForm";
 import { getBookedRanges } from "@/lib/availability";
@@ -42,6 +43,7 @@ const nav = [
   { id: "reviews", label: "Reviews" },
   { id: "similar", label: "Similar homes" },
   { id: "rules", label: "Booking & stay rules" },
+  { id: "cancellation", label: "Cancellation" },
 ];
 
 const h2 = "text-[26px] leading-tight";
@@ -71,11 +73,12 @@ async function Apartment({ params }: { params: Promise<{ slug: string }> }) {
   const apt = await getApartment(slug);
   if (!apt) notFound();
 
-  const [blocked, { bookingsOpen }, allReviews] = await Promise.all([getBookedRanges(apt.slug), getSettings(), getReviews()]);
+  const [blocked, { bookingsOpen, cancellationPolicies }, allReviews] = await Promise.all([getBookedRanges(apt.slug), getSettings(), getReviews()]);
   const reviews = allReviews.filter((r) => r.listingSlug === apt.slug);
   const avg = reviews.length ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length : 0;
   const similar = (await getApartments()).filter((a) => a.slug !== apt.slug).slice(0, 3);
   const terms = termsOf(apt);
+  const policy = resolvePolicy(terms.cancellation, cancellationPolicies);
   const hood = buildNeighborhoods(await getApartments()).find((n) => n.name === apt.neighborhood);
 
   return (
@@ -229,7 +232,6 @@ async function Apartment({ params }: { params: Promise<{ slug: string }> }) {
                 ["Children", allowsChildren(apt) ? "Children of all ages are welcome. Add them to your guest count when you request to book." : "This home is adults only — children are not allowed. Browse other homes if you are travelling with kids."],
                 ["Smoking", terms.smokingAllowed ? "Smoking is allowed in designated areas." : "No smoking anywhere in the home."],
                 ["Parties & events", terms.partiesAllowed ? "Small gatherings are fine. Please respect your neighbors." : "No parties or events."],
-                ["Cancellation", `${cancellationInfo[terms.cancellation].label}: ${cancellationInfo[terms.cancellation].text}`],
                 ["How booking works", "Pick your dates and send a request. Nestly confirms availability personally — no instant checkout."],
               ].map(([t, d]) => (
                 <div key={t} className="rounded-2xl border border-line p-5">
@@ -239,10 +241,28 @@ async function Apartment({ params }: { params: Promise<{ slug: string }> }) {
               ))}
             </dl>
           </section>
+
+          <section id="cancellation" className={section}>
+            <h2 className={`${h2} mb-5`}>Cancellation policy</h2>
+            <div className="rounded-2xl border border-line p-6">
+              <p className="inline-flex items-center rounded-full bg-brand-tint px-3 py-1 text-sm font-medium text-brand">{policy.name}</p>
+              <p className="mt-3 text-[17px] leading-relaxed">{policy.summary}</p>
+              {policy.details && (
+                <div className="mt-4 space-y-3 border-t border-line pt-4 text-[15px] leading-relaxed text-muted">
+                  {paragraphs(policy.details).map((p, i) => (
+                    <p key={i} className="whitespace-pre-line">{p}</p>
+                  ))}
+                </div>
+              )}
+              <p className="mt-4 text-sm text-muted">
+                The refundable security deposit is handled separately. The policy shown when you send your request is the one that applies to your stay.
+              </p>
+            </div>
+          </section>
         </div>
 
         <aside className="pt-8 lg:sticky lg:top-40 lg:self-start">
-          <BookingCard slug={apt.slug} title={apt.title} price={apt.price} monthlyPrices={apt.monthlyPrices} availableFrom={apt.availableFrom} childrenAllowed={allowsChildren(apt)} terms={terms} blocked={blocked} bookingsOpen={bookingsOpen} />
+          <BookingCard slug={apt.slug} title={apt.title} price={apt.price} monthlyPrices={apt.monthlyPrices} availableFrom={apt.availableFrom} childrenAllowed={allowsChildren(apt)} terms={terms} blocked={blocked} bookingsOpen={bookingsOpen} cancellation={{ name: policy.name, summary: policy.summary }} />
         </aside>
       </div>
     </div>

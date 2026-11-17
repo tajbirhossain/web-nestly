@@ -31,12 +31,11 @@ export type Apartment = {
   terms?: Partial<Terms>;
 };
 
-export type Cancellation = "flexible" | "moderate" | "strict";
-export const cancellationInfo: Record<Cancellation, { label: string; text: string }> = {
-  flexible: { label: "Flexible", text: "Free cancellation up to 14 days before move-in. After that, the first month's rent is non-refundable." },
-  moderate: { label: "Moderate", text: "Free cancellation up to 30 days before move-in. After that, the first month's rent is non-refundable." },
-  strict: { label: "Strict", text: "Free cancellation within 48 hours of confirming if move-in is 60+ days away. After that, the first month's rent is non-refundable." },
-};
+/**
+ * Id of a cancellation policy: a standard one ("flexible", "moderate", "strict") or a
+ * special policy the admin created ("cp_…"). See lib/cancellation.ts.
+ */
+export type Cancellation = string;
 
 /** Fees, occupancy and house rules shown on a listing and used when booking. */
 export type Terms = {

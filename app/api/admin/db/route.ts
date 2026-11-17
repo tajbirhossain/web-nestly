@@ -2,6 +2,7 @@ import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
 import { TABLES, dbEnabled, isTable, sql } from "@/lib/db";
+import { isPolicyId, sanitizePolicies } from "@/lib/cancellation";
 import { sanitizeMonthlyPrices } from "@/lib/pricing";
 
 // Data endpoint for the admin panel. Every request needs a signed-in admin session
@@ -40,8 +41,17 @@ function listingProblem(item: Record<string, unknown>): string | null {
   if (item.cleaningFee !== undefined && !money(item.cleaningFee)) return "Cleaning fee must be 0 or more";
   if (item.securityDeposit !== undefined && !money(item.securityDeposit)) return "Security deposit must be 0 or more";
   if (sanitizeMonthlyPrices(item.monthlyPrices) === null) return "Custom monthly prices must use YYYY-MM months and positive prices";
+  if (item.cancellation !== undefined && !isPolicyId(item.cancellation)) return "Unknown cancellation policy";
   return null;
 }
+
+// Fields on a booking that only the booking API may write: the price quote and the
+// cancellation policy the guest saw. Admin saves can't add, change or remove them.
+const SERVER_OWNED_BOOKING_FIELDS = ["quote", "cancellationPolicy"];
+const keepStored = SERVER_OWNED_BOOKING_FIELDS.map(
+  (k) => `case when bookings.data ? '${k}' then jsonb_build_object('${k}', bookings.data->'${k}') else '{}'::jsonb end`,
+).join("\n                 || ");
+const stripClient = SERVER_OWNED_BOOKING_FIELDS.map((k) => ` - '${k}'`).join("");
 
 export async function POST(req: Request) {
   const denied = requireAdmin(req);
@@ -68,6 +78,13 @@ export async function POST(req: Request) {
           else delete (item as { monthlyPrices?: unknown }).monthlyPrices;
         }
       }
+      if (body.table === "settings") {
+        for (const item of body.items) {
+          const res = sanitizePolicies((item as { cancellationPolicies?: unknown }).cancellationPolicies);
+          if (!res.ok) return NextResponse.json({ error: res.error }, { status: 422 });
+          Object.assign(item, { cancellationPolicies: res.policies });
+        }
+      }
       if (body.items.length) {
         // `ordered` stamps created_at so rows read back in array order (used when seeding).
         const base = Date.now();
@@ -76,18 +93,15 @@ export async function POST(req: Request) {
           data: item,
           created_at: body.ordered ? new Date(base - i * 1000).toISOString() : null,
         }));
-        // A booking's `quote` is server-owned: written once by the booking API from stored
-        // prices. Admin saves can never add, change or remove it, so the stored amount of
-        // an existing booking can't be altered through this endpoint.
+        // Server-owned booking fields (see SERVER_OWNED_BOOKING_FIELDS) are stripped from
+        // what the client sends, and an existing booking keeps the values already stored.
         const write =
           body.table === "bookings"
             ? `insert into bookings (id, data, created_at)
-               select e->>'id', (e->'data') - 'quote', coalesce((e->>'created_at')::timestamptz, now())
+               select e->>'id', (e->'data')${stripClient}, coalesce((e->>'created_at')::timestamptz, now())
                from jsonb_array_elements($1::jsonb) e
-               on conflict (id) do update set data =
-                 case when bookings.data ? 'quote'
-                      then jsonb_set(excluded.data, '{quote}', bookings.data->'quote')
-                      else excluded.data end`
+               on conflict (id) do update set data = excluded.data
+                 || ${keepStored}`
             : `insert into ${body.table} (id, data, created_at)
                select e->>'id', e->'data', coalesce((e->>'created_at')::timestamptz, now())
                from jsonb_array_elements($1::jsonb) e

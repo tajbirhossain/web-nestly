@@ -1,4 +1,5 @@
 import type { Borough, Terms } from "@/lib/data";
+import type { CancellationPolicy, PolicySnapshot } from "@/lib/cancellation";
 import type { BookingQuote, MonthlyPrices } from "@/lib/pricing";
 
 export type ListingStatus = "published" | "draft" | "archived";
@@ -47,6 +48,8 @@ export type Booking = {
   createdAt: string;
   /** Server-computed price at request time. Never set by the browser; absent on bookings made before quotes existed. */
   quote?: BookingQuote;
+  /** The cancellation policy in force when the guest requested. Server-set; absent on older bookings. */
+  cancellationPolicy?: PolicySnapshot;
 };
 
 export type InquiryType = "contact" | "corporate" | "relocation" | "newsletter";
@@ -114,6 +117,8 @@ export type Settings = {
   notifyBookings: boolean;
   notifyInquiries: boolean;
   notifyHosts: boolean;
+  /** Special cancellation policies written by the admin (the standard ones are built in). */
+  cancellationPolicies?: CancellationPolicy[];
 };
 
 export type DB = {

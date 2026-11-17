@@ -139,8 +139,40 @@ describe("signed-in admin writes are validated", () => {
     );
     expect(res.status).toBe(200);
     const { text } = db.queries[0];
-    // New rows: the client's quote is removed. Existing rows: the stored quote is written back.
-    expect(text).toMatch(/\(e->'data'\) - 'quote'/);
-    expect(text).toMatch(/jsonb_set\(excluded\.data, '\{quote\}', bookings\.data->'quote'\)/);
+    // New rows: client values are removed. Existing rows: stored values are written back.
+    // (Behavior is checked against real Postgres in admin-db-sql.test.ts.)
+    expect(text).toMatch(/\(e->'data'\) - 'quote' - 'cancellationPolicy'/);
+    expect(text).toMatch(/bookings\.data->'quote'/);
+    expect(text).toMatch(/bookings\.data->'cancellationPolicy'/);
+  });
+
+  it.each([
+    [{ cancellationPolicies: "nope" }],
+    [{ cancellationPolicies: [{ id: "flexible", name: "Mine", summary: "x" }] }], // can't overwrite a standard id
+    [{ cancellationPolicies: [{ id: "cp_abcd1", name: "Moderate", summary: "x" }] }], // name clashes with a standard policy
+    [{ cancellationPolicies: [{ id: "cp_abcd1", name: "A", summary: "" }] }],
+    [{ cancellationPolicies: [{ id: "cp_abcd1", name: "A", summary: "x" }, { id: "cp_abcd1", name: "B", summary: "y" }] }],
+    [{ cancellationPolicies: [{ id: "cp_abcd1", name: "A", summary: "x".repeat(301) }] }],
+  ])("rejects invalid special policies %j", async (fields) => {
+    const { cookie } = await login();
+    const res = await dbRoute.POST(json("http://localhost/api/admin/db", { op: "save", table: "settings", items: [{ id: "main", ...fields }] }, cookie));
+    expect(res.status).toBe(422);
+    expect(db.queries).toHaveLength(0);
+  });
+
+  it("saves valid special policies, trimmed", async () => {
+    const { cookie } = await login();
+    const res = await dbRoute.POST(
+      json("http://localhost/api/admin/db", { op: "save", table: "settings", items: [{ id: "main", cancellationPolicies: [{ id: "cp_holiday1", name: "  Holiday  ", summary: " No refunds in December. " }] }] }, cookie),
+    );
+    expect(res.status).toBe(200);
+    const saved = JSON.parse(db.queries[0].params![0] as string)[0].data;
+    expect(saved.cancellationPolicies).toEqual([{ id: "cp_holiday1", name: "Holiday", summary: "No refunds in December." }]);
+  });
+
+  it("rejects a listing pointing at a malformed policy id", async () => {
+    const { cookie } = await login();
+    const res = await dbRoute.POST(json("http://localhost/api/admin/db", { op: "save", table: "listings", items: [{ id: "home", price: 1000, cancellation: "<script>" }] }, cookie));
+    expect(res.status).toBe(422);
   });
 });

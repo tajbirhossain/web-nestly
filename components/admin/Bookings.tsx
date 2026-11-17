@@ -7,6 +7,7 @@ import { fmtDate, timeAgo } from "@/lib/admin/format";
 import { actions, useDB } from "@/lib/admin/store";
 import type { Booking, BookingStatus } from "@/lib/admin/types";
 import { money } from "@/lib/data";
+import { paragraphs } from "@/lib/cancellation";
 import { fmtCents, fmtMonth } from "@/lib/pricing";
 import { useFeedback } from "./feedback";
 import { Icon } from "./icons";
@@ -202,6 +203,25 @@ function BookingDetail({ booking: b }: { booking: Booking }) {
             </tbody>
           </table>
           <p className="mt-1.5 text-[12px] text-muted">Calculated by the server from the listing&apos;s prices when the request arrived. Later price changes don&apos;t affect it.</p>
+        </section>
+      )}
+
+      {b.cancellationPolicy && (
+        <section>
+          <h3 className="mb-2 text-base">Cancellation policy</h3>
+          <div className="rounded-xl border border-line p-3">
+            <p className="font-medium">
+              {b.cancellationPolicy.name}
+              <span className="ml-2 text-[12px] font-normal text-muted">{b.cancellationPolicy.standard ? "Standard" : "Special"}</span>
+            </p>
+            <p className="mt-1 text-[13px]">{b.cancellationPolicy.summary}</p>
+            {b.cancellationPolicy.details && (
+              <div className="mt-1 space-y-1 text-[13px] text-muted">
+                {paragraphs(b.cancellationPolicy.details).map((t, i) => <p key={i} className="whitespace-pre-line">{t}</p>)}
+              </div>
+            )}
+          </div>
+          <p className="mt-1.5 text-[12px] text-muted">The policy shown to the guest when they requested. Later policy edits don&apos;t affect it.</p>
         </section>
       )}
 

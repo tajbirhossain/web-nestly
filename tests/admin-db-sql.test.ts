@@ -31,6 +31,7 @@ const read = async (id: string) =>
   ((await pg.db.query<{ data: Record<string, unknown> }>("select data from bookings where id = $1", [id])).rows[0]?.data);
 
 const serverQuote = { currency: "USD", nights: 30, rentCents: 122_581, cleaningFeeCents: 20_000, totalCents: 142_581, segments: [] };
+const serverPolicy = { id: "strict", name: "Strict", summary: "Strict terms.", standard: true };
 
 beforeAll(async () => {
   pg.db = new PGlite();
@@ -41,7 +42,7 @@ beforeEach(async () => {
   // A booking created by the booking API, with its server-computed quote.
   await pg.db.query("insert into bookings (id, data) values ($1, $2::jsonb)", [
     "bk_server",
-    JSON.stringify({ id: "bk_server", status: "new", notes: "", quote: serverQuote }),
+    JSON.stringify({ id: "bk_server", status: "new", notes: "", quote: serverQuote, cancellationPolicy: serverPolicy }),
   ]);
 });
 
@@ -70,5 +71,33 @@ describe("admin booking saves vs. stored quotes (real Postgres)", () => {
     expect(legacy.status).toBe("confirmed");
     expect(legacy.quote).toBeUndefined();
     expect((await read("bk_new")).quote).toBeUndefined();
+  });
+});
+
+describe("admin booking saves vs. stored cancellation policy (real Postgres)", () => {
+  it("keeps the stored policy when the client sends a different one or none", async () => {
+    await save([{ id: "bk_server", status: "confirmed", cancellationPolicy: { id: "flexible", name: "Free", summary: "x", standard: true } }]);
+    let row = await read("bk_server");
+    expect(row.status).toBe("confirmed");
+    expect(row.cancellationPolicy).toEqual(serverPolicy);
+    expect(row.quote).toEqual(serverQuote);
+
+    await save([{ id: "bk_server", status: "cancelled" }]);
+    row = await read("bk_server");
+    expect(row.cancellationPolicy).toEqual(serverPolicy);
+    expect(row.quote).toEqual(serverQuote);
+  });
+
+  it("a client can't attach a policy to a booking that has none", async () => {
+    await save([{ id: "bk_new2", status: "new", cancellationPolicy: { id: "flexible" } }]);
+    expect((await read("bk_new2")).cancellationPolicy).toBeUndefined();
+  });
+
+  it("keeps a stored policy on a legacy booking that has no quote", async () => {
+    await pg.db.query("insert into bookings (id, data) values ('bk_pol', $1::jsonb)", [JSON.stringify({ id: "bk_pol", status: "new", cancellationPolicy: serverPolicy })]);
+    await save([{ id: "bk_pol", status: "confirmed" }]);
+    const row = await read("bk_pol");
+    expect(row.cancellationPolicy).toEqual(serverPolicy);
+    expect(row.quote).toBeUndefined();
   });
 });

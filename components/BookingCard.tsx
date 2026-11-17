@@ -20,6 +20,7 @@ export default function BookingCard({
   terms,
   blocked = [],
   bookingsOpen = true,
+  cancellation,
 }: {
   slug: string;
   title: string;
@@ -34,6 +35,8 @@ export default function BookingCard({
   blocked?: { start: string; end: string }[];
   /** False when the admin has paused new booking requests. */
   bookingsOpen?: boolean;
+  /** This home's cancellation policy; the full text is in the #cancellation section of the page. */
+  cancellation?: { name: string; summary: string };
 }) {
   const minNights = useMinNights();
   const [start, setStart] = useState("");
@@ -111,6 +114,13 @@ export default function BookingCard({
         )}
         <p className="mt-3 rounded-xl bg-brand-tint px-3 py-2 text-center text-xs font-medium text-brand">Book direct &amp; save up to 20% — no third-party platform fees.</p>
         <p className="mt-2 text-center text-xs text-muted">Request to book — we confirm availability personally.</p>
+        {cancellation && (
+          <div className="mt-3 border-t border-line pt-3 text-xs">
+            <p className="font-medium text-ink">Cancellation: {cancellation.name}</p>
+            <p className="mt-0.5 text-muted">{cancellation.summary}</p>
+            <a href="#cancellation" className="mt-1 inline-block font-medium text-brand underline underline-offset-4">Full cancellation policy</a>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center justify-between rounded-2xl border border-line bg-white px-5 py-4 text-sm">
